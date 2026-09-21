@@ -1,17 +1,15 @@
 /**
- * Service Worker - Centro de Ciencia Nova (PWA)
- * Estrategia de caché avanzada y soporte offline completo
+ * Service Worker - RoboDocs (Robótica Industrial)
+ * Soporte offline 100%, almacenamiento en caché y estrategia Stale-While-Revalidate
  */
 
-const CACHE_NAME = 'nova-cache-v2';
+const CACHE_NAME = 'robodocs-cache-v1';
 const STATIC_ASSETS = [
     './',
     './index.html',
-    './documentacion.html',
     './css/styles.css',
-    './js/main.js',
     './js/latex-parser.js',
-    './js/docs-viewer.js',
+    './js/docs-app.js',
     './manifest.webmanifest',
     './manifest.json',
     './docs/index.json',
@@ -28,26 +26,26 @@ const STATIC_ASSETS = [
     './icons/favicon-32.png'
 ];
 
-// 1. Instalación del Service Worker: precaché de recursos críticos
+// 1. Instalación: precaché de recursos críticos de documentación
 self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then((cache) => {
-                console.log('[SW] Precachando recursos esenciales de Nova...');
+                console.log('[RoboDocs SW] Precachando plataforma de documentación...');
                 return cache.addAll(STATIC_ASSETS);
             })
             .then(() => self.skipWaiting())
     );
 });
 
-// 2. Activación: limpieza de cachés antiguos y reclamación de clientes
+// 2. Activación: limpieza de cachés antiguas
 self.addEventListener('activate', (event) => {
     event.waitUntil(
         caches.keys().then((cacheNames) => {
             return Promise.all(
                 cacheNames.map((name) => {
                     if (name !== CACHE_NAME) {
-                        console.log('[SW] Eliminando versión obsoleta de caché:', name);
+                        console.log('[RoboDocs SW] Purgando versión previa de caché:', name);
                         return caches.delete(name);
                     }
                 })
@@ -56,43 +54,36 @@ self.addEventListener('activate', (event) => {
     );
 });
 
-// 3. Estrategia de Fetch: Stale-While-Revalidate para recursos estáticos
+// 3. Interceptación Fetch: Stale-While-Revalidate
 self.addEventListener('fetch', (event) => {
-    // Solo procesar peticiones HTTP/HTTPS GET
     if (event.request.method !== 'GET') return;
 
-    const requestUrl = new URL(event.request.url);
-
-    // Evitar interceptar extensiones de navegador u orígenes extraños
-    if (!requestUrl.protocol.startsWith('http')) return;
+    const reqUrl = new URL(event.request.url);
+    if (!reqUrl.protocol.startsWith('http')) return;
 
     event.respondWith(
         caches.match(event.request).then((cachedResponse) => {
             const fetchPromise = fetch(event.request)
                 .then((networkResponse) => {
-                    // Si es una respuesta válida, almacenarla en caché para uso offline
                     if (networkResponse && networkResponse.status === 200) {
-                        const responseToCache = networkResponse.clone();
+                        const copy = networkResponse.clone();
                         caches.open(CACHE_NAME).then((cache) => {
-                            cache.put(event.request, responseToCache);
+                            cache.put(event.request, copy);
                         });
                     }
                     return networkResponse;
                 })
                 .catch(() => {
-                    // Si la red falla y no hay respuesta en caché para navegación, retornar index.html
                     if (event.request.mode === 'navigate') {
                         return caches.match('./index.html');
                     }
                 });
 
-            // Retornar caché primero si existe, o esperar a la red
             return cachedResponse || fetchPromise;
         })
     );
 });
 
-// 4. Escuchar mensajes del cliente
 self.addEventListener('message', (event) => {
     if (event.data && event.data.type === 'SKIP_WAITING') {
         self.skipWaiting();

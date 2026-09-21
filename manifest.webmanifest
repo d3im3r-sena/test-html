@@ -1,19 +1,19 @@
 {
-  "name": "Centro de Ciencia Nova",
-  "short_name": "Nova Ciencia",
-  "description": "Explora el universo, la robótica, las energías limpias y la biotecnología en el Centro de Ciencia Nova con exposiciones interactivas y planetario 8K.",
+  "name": "RoboDocs - Robótica Industrial",
+  "short_name": "RoboDocs",
+  "description": "Plataforma de documentación técnica y científica en LaTeX (.tex) sobre Robótica Industrial: cinemática 6-DOF, control por par computado, seguridad en cobots ISO y visión artificial.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#070b14",
-  "theme_color": "#070b14",
+  "background_color": "#080c16",
+  "theme_color": "#080c16",
   "lang": "es-CO",
   "dir": "ltr",
   "categories": [
     "education",
-    "science",
-    "entertainment"
+    "engineering",
+    "productivity"
   ],
   "icons": [
     {
@@ -49,31 +49,31 @@
   ],
   "shortcuts": [
     {
-      "name": "Exposición Destacada",
-      "short_name": "Exposición",
-      "description": "Exploradores del Universo",
-      "url": "./index.html#exposicion",
+      "name": "Cinemática 6-DOF",
+      "short_name": "Cinemática",
+      "description": "Matrices Denavit-Hartenberg y Jacobiano",
+      "url": "./index.html#cinematica-6dof",
       "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
     },
     {
-      "name": "Talleres y Actividades",
-      "short_name": "Talleres",
-      "description": "Robótica, Astronomía y Biología",
-      "url": "./index.html#actividades",
+      "name": "Dinámica y Control",
+      "short_name": "Control PID",
+      "description": "Control por par computado y trayectorias",
+      "url": "./index.html#control-dinamica",
       "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
     },
     {
-      "name": "Planetario Domo 8K",
-      "short_name": "Planetario",
-      "description": "Funciones y Cartelera 8K",
-      "url": "./index.html#planetario",
+      "name": "Seguridad Cobots ISO",
+      "short_name": "Seguridad",
+      "description": "Normativas ISO 10218 e ISO/TS 15066",
+      "url": "./index.html#seguridad-cobots",
       "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
     },
     {
-      "name": "Tarifas y Reservas",
-      "short_name": "Entradas",
-      "description": "Calculadora y compra de boletos",
-      "url": "./index.html#tarifas",
+      "name": "Visión Artificial",
+      "short_name": "Visión",
+      "description": "Calibración ojo-en-mano y pick-and-place",
+      "url": "./index.html#vision-artificial",
       "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
     }
   ]
