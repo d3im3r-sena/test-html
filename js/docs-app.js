@@ -504,7 +504,7 @@ class RoboDocsApp {
     }
 
     /* ==========================================================================
-       8. Zoom Interactivo en Diagramas TikZ
+       8. Zoom Interactivo y Pantalla Completa en Diagramas TikZ
        ========================================================================== */
     zoomDiagram(wrapperId, delta) {
         if (!this.diagramScales) this.diagramScales = {};
@@ -539,19 +539,86 @@ class RoboDocsApp {
         }
     }
 
+    openDiagramModal(wrapperId) {
+        const sourceContent = document.getElementById(`zoom-content-${wrapperId}`);
+        const modal = document.getElementById('diagramModal');
+        const modalContent = document.getElementById('diagramModalContent');
+        if (!sourceContent || !modal || !modalContent) return;
+
+        modalContent.innerHTML = sourceContent.innerHTML;
+        this.modalScale = 1.0;
+        modalContent.style.transform = 'scale(1)';
+
+        const modalLevel = document.getElementById('modalZoomLevel');
+        if (modalLevel) modalLevel.textContent = '100%';
+
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+
+    closeDiagramModal() {
+        const modal = document.getElementById('diagramModal');
+        if (modal) {
+            modal.style.display = 'none';
+            document.body.style.overflow = '';
+        }
+    }
+
+    zoomModalDiagram(delta) {
+        this.modalScale = Math.min(Math.max(Math.round(((this.modalScale || 1.0) + delta) * 100) / 100, 0.5), 4.0);
+        const modalContent = document.getElementById('diagramModalContent');
+        const modalLevel = document.getElementById('modalZoomLevel');
+
+        if (modalContent) {
+            modalContent.style.transform = `scale(${this.modalScale})`;
+        }
+        if (modalLevel) {
+            modalLevel.textContent = `${Math.round(this.modalScale * 100)}%`;
+        }
+    }
+
+    resetModalDiagram() {
+        this.modalScale = 1.0;
+        const modalContent = document.getElementById('diagramModalContent');
+        const modalLevel = document.getElementById('modalZoomLevel');
+        if (modalContent) modalContent.style.transform = 'scale(1)';
+        if (modalLevel) modalLevel.textContent = '100%';
+    }
+
+    /* Métodos auxiliares de interacción con código */
+    runCodeSnippet(codeId) {
+        if (window.pythonCodeRunner) window.pythonCodeRunner.run(codeId);
+    }
+
+    toggleCodeEdit(codeId) {
+        if (window.pythonCodeRunner) window.pythonCodeRunner.toggleEdit(codeId);
+    }
+
+    clearConsole(codeId) {
+        if (window.pythonCodeRunner) window.pythonCodeRunner.clearConsole(codeId);
+    }
+
     /* ==========================================================================
        9. Eventos de UI, Atajos de Teclado y Herramientas
        ========================================================================== */
     bindEvents() {
-        // Conmutador de Vistas: Modo Lista vs Modo Presentación
+        // Conmutador y botones para iniciar Modo Presentación
         const btnViewContinuous = document.getElementById('btnViewContinuous');
         const btnViewPresentation = document.getElementById('btnViewPresentation');
+        const btnStartPres = document.getElementById('btnStartPresentation');
+        const btnSidebarPres = document.getElementById('btnSidebarPresentation');
 
         if (btnViewContinuous) {
             btnViewContinuous.addEventListener('click', () => this.setPresentationMode(false));
         }
         if (btnViewPresentation) {
             btnViewPresentation.addEventListener('click', () => this.setPresentationMode(true));
+        }
+        if (btnStartPres) {
+            btnStartPres.addEventListener('click', () => this.setPresentationMode(true));
+        }
+        if (btnSidebarPres) {
+            btnSidebarPres.addEventListener('click', () => this.setPresentationMode(true));
         }
 
         // Controles del Dock de Presentación
@@ -571,6 +638,16 @@ class RoboDocsApp {
 
         // Atajos de Teclado Globales
         window.addEventListener('keydown', (e) => {
+            // Si el modal de diagrama está abierto, Esc lo cierra
+            const diagramModal = document.getElementById('diagramModal');
+            if (diagramModal && diagramModal.style.display !== 'none') {
+                if (e.key === 'Escape') {
+                    e.preventDefault();
+                    this.closeDiagramModal();
+                    return;
+                }
+            }
+
             if (['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
 
             if (this.isPresentationMode) {

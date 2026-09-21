@@ -2,7 +2,7 @@
  * RoboDocs - Motor Integral de Renderizado LaTeX & Beamer
  * Soporta documentos académicos, presentaciones Beamer (16:9),
  * macros docentes personalizadas (\Idea, \Practice, \DefBlock, etc.),
- * entornos de código Minted/Tcolorbox y diagramas geométricos 2D TikZ a SVG.
+ * entornos de código interactivo Python/NumPy y diagramas geométricos 2D TikZ a SVG.
  */
 
 class LatexParser {
@@ -10,23 +10,26 @@ class LatexParser {
         this.toc = [];
         this.sectionCount = 0;
         this.slideCount = 0;
+        this.totalExpectedSlides = 131;
         this.meta = {};
+        this.codeCounter = 0;
     }
 
     /**
      * Parsea contenido LaTeX completo a HTML estructurado
      * @param {string} texContent - Código fuente .tex
-     * @returns {Object} { meta, html, toc, raw, isBeamer }
+     * @returns {Object} { meta, html, toc, raw, isBeamer, slideCount }
      */
     parse(texContent) {
         this.toc = [];
         this.sectionCount = 0;
         this.slideCount = 0;
+        this.codeCounter = 0;
 
-        // 1. Extraer Metadatos y Variables Institucionales (del template o del documento)
+        // 1. Extraer Metadatos y Variables Institucionales
         this.meta = this.extractVariables(texContent);
 
-        // 2. Comprobar si es un archivo de plantilla puro (sin \begin{document})
+        // 2. Comprobar si es Beamer o documento estándar
         const hasDocumentEnv = texContent.includes('\\begin{document}');
         const isBeamer = texContent.includes('{beamer}') || texContent.includes('\\begin{frame}') || texContent.includes('\\TitleSlide');
 
@@ -34,6 +37,14 @@ class LatexParser {
             // Es la plantilla institucional template-slide.tex
             return this.renderTemplateDocumentation(texContent);
         }
+
+        // Estimar total de diapositivas en primera pasada
+        const titleSlideCount = (texContent.match(/\\TitleSlide/g) || []).length;
+        const normasSlideCount = (texContent.match(/\\NormasSlide/g) || []).length;
+        const sectionSlideCount = (texContent.match(/\\SectionSlide/g) || []).length;
+        const frameCount = (texContent.match(/\\begin\{frame\}/g) || []).length;
+        this.totalExpectedSlides = titleSlideCount + normasSlideCount + sectionSlideCount + frameCount;
+        if (this.totalExpectedSlides === 0) this.totalExpectedSlides = 131;
 
         // 3. Extraer cuerpo de documento si existe
         let body = texContent;
@@ -43,17 +54,17 @@ class LatexParser {
             body = texContent.substring(docStart + 16, docEnd !== -1 ? docEnd : texContent.length);
         }
 
-        // Eliminar comentarios que no sean parte de comandos (\% queda protegido)
+        // Eliminar comentarios de LaTeX
         body = body.replace(/(^|[^\\])%.*$/gm, '$1');
 
-        // Ignorar comandos de input de plantillas locales
+        // Ignorar comandos de input locales
         body = body.replace(/\\input\{[^}]+\}/g, '');
 
         // Convertir entornos \begin{center} y \end{center}
         body = body.replace(/\\begin\{center\}/g, '<div class="latex-center">');
         body = body.replace(/\\end\{center\}/g, '</div>');
 
-        // 4. Pre-procesar entornos de código (tcolorbox / minted / verbatim) para protegerlos de reemplazos
+        // 4. Pre-procesar entornos de código (tcolorbox / minted / pythoncode)
         const codeBlocks = [];
         body = this.protectCodeBlocks(body, codeBlocks);
 
@@ -61,14 +72,13 @@ class LatexParser {
         const tikzBlocks = [];
         body = this.protectTikzBlocks(body, tikzBlocks);
 
-        // 6. Procesar diapositivas maestras del template
+        // 6. Procesar diapositivas maestras del template (\TitleSlide, \NormasSlide, \SectionSlide)
         body = this.processMasterSlides(body);
 
         // 7. Si es Beamer, procesar los frames individuales
         if (isBeamer) {
             body = this.processBeamerFrames(body);
         } else {
-            // Documento técnico estándar: procesar secciones regulares
             body = this.processSections(body);
         }
 
@@ -78,7 +88,7 @@ class LatexParser {
         // 9. Procesar bloques docentes (\Idea, \Practice, \DefBlock, \Warning, etc.)
         body = this.processDocentBlocks(body);
 
-        // 10. Procesar ecuaciones matemáticas (display math \[ ... \], equation, align)
+        // 10. Procesar ecuaciones matemáticas (display math \[ ... \], equation)
         body = this.processDisplayMath(body);
 
         // 11. Procesar listas (itemize, enumerate)
@@ -105,23 +115,6 @@ class LatexParser {
         // 17. Ensamblar documento final
         const finalHtml = `
             <article class="latex-beamer-deck ${isBeamer ? 'is-beamer-presentation' : 'is-academic-paper'}">
-                <header class="deck-main-header">
-                    <div class="deck-header-badge">
-                        <span class="badge-icon">🎓</span>
-                        <span>${this.meta.institution || 'Politécnico Colombiano Jaime Isaza Cadavid'}</span>
-                        <span class="badge-sep">•</span>
-                        <span>${this.meta.courseCode || 'ING'}</span>
-                    </div>
-                    <h1 class="deck-main-title">${this.meta.courseName || this.meta.title}</h1>
-                    ${this.meta.subtitle ? `<div class="deck-main-subtitle">${this.meta.subtitle}</div>` : ''}
-                    <div class="deck-meta-bar">
-                        <div class="meta-item"><i class="fa fa-user-tie"></i> <strong>Docente:</strong> ${this.meta.instructor || this.meta.author}</div>
-                        ${this.meta.email ? `<div class="meta-item"><i class="fa fa-envelope"></i> ${this.meta.email}</div>` : ''}
-                        <div class="meta-item"><i class="fa fa-calendar-alt"></i> <strong>Periodo:</strong> ${this.meta.date || '2026-2'}</div>
-                        <div class="meta-item meta-slides-counter"><i class="fa fa-layer-group"></i> <strong>${this.slideCount} Diapositivas</strong></div>
-                    </div>
-                </header>
-
                 <div class="deck-slides-canvas">
                     ${body}
                 </div>
@@ -173,7 +166,7 @@ class LatexParser {
      * Diapositivas maestras del template institucional (\TitleSlide, \NormasSlide, \SectionSlide)
      */
     processMasterSlides(tex) {
-        // \TitleSlide -> Portada Institucional
+        // 1. \TitleSlide -> Portada Institucional idéntica al PDF (Página 1)
         tex = tex.replace(/\\TitleSlide/g, () => {
             this.slideCount++;
             const slideId = `slide-${this.slideCount}`;
@@ -186,33 +179,26 @@ class LatexParser {
 
             return `
                 <section class="beamer-slide slide-cover-institutional" id="${slideId}" data-slide="${this.slideCount}">
-                    <div class="cover-accent-rule top"></div>
-                    <div class="cover-body">
-                        <div class="cover-logo-badge">
-                            <span class="institution-pill">${this.meta.institution}</span>
-                            <span class="faculty-pill">${this.meta.faculty}</span>
+                    <div class="cover-green-bar top"></div>
+                    <div class="cover-center-content">
+                        <h1 class="cover-course-title">${this.meta.courseName}</h1>
+                        <div class="cover-course-code">${this.meta.courseCode}</div>
+                        <div class="cover-institution-block">
+                            <p class="cover-faculty-text">${this.meta.faculty}</p>
+                            <p class="cover-institution-text">${this.meta.institution}</p>
                         </div>
-                        <h1 class="cover-title">${this.meta.courseName}</h1>
-                        <div class="cover-code">${this.meta.courseCode}</div>
-                        ${this.meta.subtitle ? `<p class="cover-subtitle">${this.meta.subtitle}</p>` : ''}
-                        
-                        <div class="cover-footer-info">
-                            <div class="instructor-card">
-                                <div class="instructor-icon">👨‍🏫</div>
-                                <div class="instructor-details">
-                                    <div class="instructor-name">${this.meta.instructor}</div>
-                                    <div class="instructor-email"><a href="mailto:${this.meta.email}">${this.meta.email}</a></div>
-                                </div>
-                            </div>
-                            <div class="period-badge">Semestre ${this.meta.date}</div>
+                        <div class="cover-instructor-block">
+                            <p class="cover-instructor-name">${this.meta.instructor}</p>
+                            <p class="cover-email-text"><a href="mailto:${this.meta.email}">${this.meta.email}</a></p>
                         </div>
                     </div>
-                    <div class="cover-accent-rule bottom"></div>
+                    <div class="cover-green-bar bottom"></div>
+                    ${this.renderSlideFootline(this.slideCount)}
                 </section>
             `;
         });
 
-        // \NormasSlide -> Normas de Convivencia y Compromiso Académico
+        // 2. \NormasSlide -> Normas del curso con las imágenes PNG oficiales (Página 2)
         tex = tex.replace(/\\NormasSlide/g, () => {
             this.slideCount++;
             const slideId = `slide-${this.slideCount}`;
@@ -226,35 +212,31 @@ class LatexParser {
             return `
                 <section class="beamer-slide slide-normas" id="${slideId}" data-slide="${this.slideCount}">
                     <header class="frame-title-bar">
-                        <span class="frame-slide-num">#${this.slideCount}</span>
-                        <h3 class="frame-title-text"><i class="fa fa-clipboard-check"></i> Normas del Curso</h3>
+                        <h3 class="frame-title-text">Normas del curso</h3>
                     </header>
-                    <div class="frame-body">
-                        <div class="normas-grid">
+                    <div class="frame-body normas-body">
+                        <div class="normas-row top-row">
                             <div class="norma-card">
-                                <div class="norma-icon-circle icon-yellow">⏰</div>
-                                <div class="norma-header">Puntualidad</div>
-                                <p>Cumple con los horarios y demuestra compromiso académico en cada sesión.</p>
-                            </div>
-                            <div class="norma-card">
-                                <div class="norma-icon-circle icon-green">💡</div>
-                                <div class="norma-header">Actitud Profesional</div>
-                                <p>Mantén una actitud profesional, ética y orientada al aprendizaje continuo.</p>
+                                <img src="Template/Puntual.png" class="norma-card-img" alt="Puntualidad" />
+                                <p class="norma-text"><strong>Cumple con los horarios y demuestra compromiso académico en cada sesión.</strong></p>
                             </div>
                             <div class="norma-card">
-                                <div class="norma-icon-circle icon-blue">💬</div>
-                                <div class="norma-header">Comunicación Asertiva</div>
-                                <p>Comunica tus ideas con claridad, respeto y fundamento técnico.</p>
+                                <img src="Template/Actitud.png" class="norma-card-img" alt="Actitud Profesional" />
+                                <p class="norma-text"><strong>Mantén una actitud profesional, ética y orientada al aprendizaje continuo.</strong></p>
                             </div>
-                            <div class="norma-card wide-card">
-                                <div class="norma-icon-circle icon-teal">🤝</div>
-                                <div class="norma-header">Participación Activa</div>
-                                <p>Participa activamente y contribuye de forma solidaria al trabajo colaborativo.</p>
+                            <div class="norma-card">
+                                <img src="Template/Comunicacion.png" class="norma-card-img" alt="Comunicación Asertiva" />
+                                <p class="norma-text"><strong>Comunica tus ideas con claridad, respeto y fundamento técnico.</strong></p>
                             </div>
-                            <div class="norma-card wide-card">
-                                <div class="norma-icon-circle icon-purple">🛡️</div>
-                                <div class="norma-header">Uso Responsable</div>
-                                <p>Haz uso responsable y riguroso de los recursos, equipos de cómputo e instalaciones.</p>
+                        </div>
+                        <div class="normas-row bottom-row">
+                            <div class="norma-card">
+                                <img src="Template/Participacion.png" class="norma-card-img" alt="Participación Activa" />
+                                <p class="norma-text"><strong>Participa activamente y contribuye al trabajo colaborativo.</strong></p>
+                            </div>
+                            <div class="norma-card">
+                                <img src="Template/Cuidado.png" class="norma-card-img" alt="Uso Responsable" />
+                                <p class="norma-text"><strong>Haz uso responsable de los recursos, equipos e instalaciones.</strong></p>
                             </div>
                         </div>
                     </div>
@@ -263,11 +245,14 @@ class LatexParser {
             `;
         });
 
-        // \SectionSlide{Título}{Subtítulo} -> Diapositiva de Sección
+        // 3. \SectionSlide{Título}{Subtítulo} -> Banner de Unidad Temática (Páginas 3, 6, 14, etc.)
         tex = tex.replace(/\\SectionSlide\s*\{([\s\S]*?)\}\s*\{([\s\S]*?)\}/g, (match, title, subtitle) => {
             this.slideCount++;
-            const cleanTitle = this.cleanTexorpdfstring(title.trim());
-            const cleanSub = this.cleanTexorpdfstring(subtitle.trim());
+            const rawTitle = title.trim();
+            const rawSub = subtitle.trim();
+            const cleanTitle = this.cleanTexorpdfstring(rawTitle);
+            const displayTitle = this.formatInline(this.resolveTexorpdfstringDisplay(rawTitle));
+            const displaySub = this.formatInline(this.resolveTexorpdfstringDisplay(rawSub));
             const slideId = `slide-${this.slideCount}`;
 
             this.toc.push({
@@ -279,11 +264,11 @@ class LatexParser {
 
             return `
                 <section class="beamer-slide slide-section-banner" id="${slideId}" data-slide="${this.slideCount}">
-                    <div class="section-banner-card">
-                        <div class="section-banner-pill"><i class="fa fa-folder-open"></i> Unidad Temática</div>
-                        <h2 class="section-banner-title">${this.formatInline(cleanTitle)}</h2>
-                        <div class="section-banner-rule"></div>
-                        <p class="section-banner-sub">${this.formatInline(cleanSub)}</p>
+                    <div class="section-banner-center">
+                        <div class="section-banner-card">
+                            <h2 class="section-banner-title">${displayTitle}</h2>
+                            ${displaySub ? `<p class="section-banner-sub">${displaySub}</p>` : ''}
+                        </div>
                     </div>
                     ${this.renderSlideFootline(this.slideCount)}
                 </section>
@@ -304,8 +289,6 @@ class LatexParser {
      * Procesa los frames Beamer: \begin{frame}{Título} ... \end{frame}
      */
     processBeamerFrames(tex) {
-        // Expresión regular para frames con título opcional o obligatorio
-        // Soporta: \begin{frame}{Titulo}, \begin{frame}[opciones]{Titulo}, \begin{frame}
         const frameRegex = /\\begin\{frame\}(?:\[[^\]]*\])?(?:\{([\s\S]*?)\})?([\s\S]*?)\\end\{frame\}/g;
 
         return tex.replace(frameRegex, (match, frameTitle, frameContent) => {
@@ -326,7 +309,6 @@ class LatexParser {
             return `
                 <section class="beamer-slide frame-standard" id="${slideId}" data-slide="${this.slideCount}">
                     <header class="frame-title-bar">
-                        <span class="frame-slide-num">#${this.slideCount}</span>
                         <h3 class="frame-title-text">${displayTitle}</h3>
                     </header>
                     <div class="frame-body">
@@ -338,15 +320,22 @@ class LatexParser {
         });
     }
 
+    /**
+     * Renderiza el pie de página exacto del Beamer con logo institucional
+     */
     renderSlideFootline(num) {
+        const total = this.totalExpectedSlides || 131;
+        const logoSrc = 'Template/LogoPoli.png';
         return `
             <footer class="frame-footline">
                 <div class="footline-left">
-                    <span class="footline-course">${this.meta.courseCode} • ${this.meta.courseName}</span>
+                    <span class="footline-nav-btn prev-btn" title="Anterior diapositiva" onclick="event.stopPropagation(); window.roboDocs && window.roboDocs.prevSlide()">◁</span>
+                    <span class="footline-pagenum">${num}/${total}</span>
+                    <span class="footline-nav-btn next-btn" title="Siguiente diapositiva" onclick="event.stopPropagation(); window.roboDocs && window.roboDocs.nextSlide()">▷</span>
                 </div>
                 <div class="footline-right">
                     <span class="footline-instructor">${this.meta.instructor}</span>
-                    <span class="footline-page-num">${num}</span>
+                    <img src="${logoSrc}" class="footline-logo-img" alt="Politécnico Colombiano Jaime Isaza Cadavid" />
                 </div>
             </footer>
         `;
@@ -356,7 +345,6 @@ class LatexParser {
      * Procesa columnas Beamer (\begin{columns} ... \end{columns})
      */
     processColumns(tex) {
-        // 1. Columnas individuales
         tex = tex.replace(/\\begin\{column\}\{([^}]+)\}([\s\S]*?)\\end\{column\}/g, (match, widthExpr, colContent) => {
             let flexBasis = '50%';
             const m = widthExpr.match(/([\d\.]+)\\textwidth/);
@@ -367,16 +355,15 @@ class LatexParser {
             return `<div class="beamer-column" style="flex: 1 1 ${flexBasis}; max-width: ${flexBasis};">\n${colContent.trim()}\n</div>`;
         });
 
-        // 2. Contenedor columns
-        tex = tex.replace(/\\begin\{columns\}(?:\[[^\]]*\])?([\s\S]*?)\\end\{columns\}/g, (match, content) => {
-            return `<div class="beamer-columns">\n${content.trim()}\n</div>`;
+        tex = tex.replace(/\\begin\{columns\}(?:\[[^\]]*\])?([\s\S]*?)\\end\{columns\}/g, (match, columnsContent) => {
+            return `<div class="beamer-columns-container">\n${columnsContent.trim()}\n</div>`;
         });
 
         return tex;
     }
 
     /**
-     * Procesa los bloques docentes del template-slide.tex
+     * Procesa los bloques pedagógicos Beamer con colores e iconos exactos al PDF
      */
     processDocentBlocks(tex) {
         const blocksConfig = [
@@ -387,12 +374,12 @@ class LatexParser {
             { cmd: 'Warning', defaultTitle: 'Atención', icon: '⚠️', cssClass: 'block-warning' },
             { cmd: 'Compare', defaultTitle: 'Comparación', icon: '⚖️', cssClass: 'block-compare' },
             { cmd: 'Question', defaultTitle: 'Pregunta guía', icon: '❓', cssClass: 'block-question' },
-            { cmd: 'ExampleBlock', defaultTitle: 'Ejemplo', icon: '🧩', cssClass: 'block-example' }
+            { cmd: 'ExampleBlock', defaultTitle: 'Ejemplo', icon: '🧩', cssClass: 'block-example' },
+            { cmd: 'Def', defaultTitle: 'Definición', icon: '📖', cssClass: 'block-def' },
+            { cmd: 'Example', defaultTitle: 'Ejemplo', icon: '🧩', cssClass: 'block-example' }
         ];
 
         for (const b of blocksConfig) {
-            // Soportar tanto \Cmd[Titulo]{Cuerpo} como \Cmd{Cuerpo}
-            // Utilizamos extracción balanceada de llaves para no truncar si hay fórmulas o negritas internas
             let searchIndex = 0;
             const searchToken = `\\${b.cmd}`;
 
@@ -400,7 +387,6 @@ class LatexParser {
                 const pos = tex.indexOf(searchToken, searchIndex);
                 if (pos === -1) break;
 
-                // Asegurar que es el comando exacto y no parte de otra palabra
                 const nextChar = tex[pos + searchToken.length];
                 if (nextChar && /[a-zA-Z]/.test(nextChar)) {
                     searchIndex = pos + searchToken.length;
@@ -408,10 +394,8 @@ class LatexParser {
                 }
 
                 let cur = pos + searchToken.length;
-                // Saltar espacios
                 while (cur < tex.length && /\s/.test(tex[cur])) cur++;
 
-                // Chequear argumento opcional [Titulo]
                 let customTitle = b.defaultTitle;
                 if (tex[cur] === '[') {
                     const closeBracket = tex.indexOf(']', cur);
@@ -422,7 +406,6 @@ class LatexParser {
                     }
                 }
 
-                // Chequear argumento obligatorio {Cuerpo}
                 if (tex[cur] === '{') {
                     const braceEnd = this.findMatchingBrace(tex, cur);
                     if (braceEnd !== -1) {
@@ -449,53 +432,22 @@ class LatexParser {
             }
         }
 
-        // Bloques Beamer estándar: \begin{block}{Titulo} ... \end{block}
-        tex = tex.replace(/\\begin\{block\}\{([^}]+)\}([\s\S]*?)\\end\{block\}/g, (match, title, content) => {
-            return `
-                <div class="docent-block block-standard">
-                    <div class="block-title-row"><span class="block-icon">📌</span><span class="block-title-text">${this.formatInline(title)}</span></div>
-                    <div class="block-content-body">${this.formatInline(content.trim())}</div>
-                </div>
-            `;
-        });
-
-        // \begin{alertblock}{Titulo} ... \end{alertblock}
-        tex = tex.replace(/\\begin\{alertblock\}\{([^}]+)\}([\s\S]*?)\\end\{alertblock\}/g, (match, title, content) => {
-            return `
-                <div class="docent-block block-warning">
-                    <div class="block-title-row"><span class="block-icon">⚠️</span><span class="block-title-text">${this.formatInline(title)}</span></div>
-                    <div class="block-content-body">${this.formatInline(content.trim())}</div>
-                </div>
-            `;
-        });
-
         return tex;
     }
 
     /**
-     * Pre-procesa y protege entornos de código (minted, tcolorbox, verbatim)
+     * Pre-procesa entornos de código (tcolorbox / minted / pythoncode)
      */
     protectCodeBlocks(tex, storage) {
-        const envs = [
-            { name: 'pythoncodedark', lang: 'Python (Monokai)', theme: 'dark' },
-            { name: 'pythoncode', lang: 'Python (Claro)', theme: 'light' },
-            { name: 'bashcodedark', lang: 'Bash', theme: 'dark' },
-            { name: 'bashcode', lang: 'Bash', theme: 'light' },
-            { name: 'htmlcodedark', lang: 'HTML', theme: 'dark' },
-            { name: 'htmlcode', lang: 'HTML', theme: 'light' },
-            { name: 'cppcodedark', lang: 'C++', theme: 'dark' },
-            { name: 'cppcode', lang: 'C++', theme: 'light' },
-            { name: 'sqlcodedark', lang: 'SQL', theme: 'dark' },
-            { name: 'sqlcode', lang: 'SQL', theme: 'light' },
-            { name: 'javacodedark', lang: 'Java', theme: 'dark' },
-            { name: 'javacode', lang: 'Java', theme: 'light' },
-            { name: 'consolecodedark', lang: 'Consola', theme: 'dark' },
-            { name: 'consolecode', lang: 'Consola', theme: 'light' },
-            { name: 'verbatim', lang: 'Texto', theme: 'dark' }
+        const codeEnvs = [
+            { env: 'pythoncodedark', lang: 'Python 3 (NumPy)', theme: 'dark' },
+            { env: 'pythoncode', lang: 'Python 3 (NumPy)', theme: 'light' },
+            { env: 'minted', lang: 'Python', theme: 'dark' },
+            { env: 'verbatim', lang: 'Terminal / Texto', theme: 'dark' }
         ];
 
-        for (const env of envs) {
-            const regex = new RegExp(`\\\\begin\\{${env.name}\\}([\\s\\S]*?)\\\\end\\{${env.name}\\}`, 'g');
+        for (const env of codeEnvs) {
+            const regex = new RegExp(`\\\\begin\\{${env.env}\\}(?:\\[[^\\]]*\\])?([\\s\\S]*?)\\\\end\\{${env.env}\\}`, 'g');
             tex = tex.replace(regex, (match, code) => {
                 const placeholder = `___CODE_BLOCK_${storage.length}___`;
                 storage.push({
@@ -509,7 +461,12 @@ class LatexParser {
         return tex;
     }
 
+    /**
+     * Renderiza tarjeta de código interactiva con botón de ejecución y consola
+     */
     renderCodeBlockCard(code, lang, theme) {
+        this.codeCounter++;
+        const codeId = `code-block-${this.codeCounter}`;
         const lines = code.split('\n');
         const numberedLines = lines.map((line, idx) => {
             const safe = this.escapeHtml(line);
@@ -517,7 +474,7 @@ class LatexParser {
         }).join('');
 
         return `
-            <div class="code-block-card theme-${theme}">
+            <div class="code-block-card interactive-code theme-${theme}" id="${codeId}">
                 <div class="code-card-header">
                     <div class="code-lang-indicator">
                         <span class="code-dot red"></span>
@@ -525,13 +482,35 @@ class LatexParser {
                         <span class="code-dot green"></span>
                         <span class="code-lang-name"><i class="fa fa-terminal"></i> ${lang}</span>
                     </div>
-                    <button class="btn-copy-code-snippet" onclick="window.RoboDocsApp && window.RoboDocsApp.copySnippet(this)" title="Copiar fragmento">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
-                        <span>Copiar</span>
-                    </button>
+                    <div class="code-card-actions">
+                        <button type="button" class="btn-code-action btn-code-run" onclick="window.pythonCodeRunner && window.pythonCodeRunner.run('${codeId}')" title="Ejecutar script y ver resultado en terminal">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                            <span>▶ Ejecutar</span>
+                        </button>
+                        <button type="button" class="btn-code-action btn-code-edit" onclick="window.pythonCodeRunner && window.pythonCodeRunner.toggleEdit('${codeId}')" title="Editar parámetros y código">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                            <span>Editar</span>
+                        </button>
+                        <button type="button" class="btn-code-action btn-code-copy" onclick="window.roboDocs && window.roboDocs.copySnippet(this)" title="Copiar código al portapapeles">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                            <span>Copiar</span>
+                        </button>
+                    </div>
                 </div>
                 <div class="code-viewport" data-raw="${this.escapeHtml(code)}">
                     ${numberedLines}
+                </div>
+                <textarea class="code-editor-area" style="display: none;" spellcheck="false">${this.escapeHtml(code)}</textarea>
+                <div class="code-terminal-console" id="console-${codeId}" style="display: none;">
+                    <div class="terminal-bar">
+                        <span class="terminal-title"><i class="fa fa-terminal"></i> Terminal Python 3.12 (NumPy)</span>
+                        <button type="button" class="btn-terminal-clear" onclick="window.pythonCodeRunner && window.pythonCodeRunner.clearConsole('${codeId}')">✖ Cerrar</button>
+                    </div>
+                    <pre class="terminal-output" id="output-${codeId}"></pre>
+                    <div class="terminal-canvas-container" id="canvas-container-${codeId}" style="display: none;">
+                        <div class="canvas-caption">Visualización Gráfica 2D (Matplotlib Quiver)</div>
+                        <canvas id="canvas-${codeId}" width="400" height="300"></canvas>
+                    </div>
                 </div>
             </div>
         `;
@@ -569,7 +548,7 @@ class LatexParser {
     }
 
     /**
-     * Motor Robusto de interpretación 2D TikZ a Gráficos Vectoriales SVG con Zoom
+     * Motor de interpretación 2D TikZ a Gráficos Vectoriales SVG con Zoom y Pantalla Completa
      */
     renderTikZToSVG(tikzCode, diagramId = 1) {
         let code = tikzCode.replace(/%.*$/gm, "").replace(/\r?\n/g, " ");
@@ -618,185 +597,230 @@ class LatexParser {
             const opts = scopeMatch[1];
             scopeBody = scopeMatch[2];
             const sm = opts.match(/shift=\{?\(([^)]+)\)\}?/);
-            if (sm) scopeShift = sm[1];
+            if (sm) scopeShift = resolveCoord(sm[1]);
             const rm = opts.match(/rotate=([\d\.\-]+)/);
             if (rm) scopeRotate = parseFloat(rm[1]);
-            code = code.replace(scopeMatch[0], " ");
+            code = code.replace(scopeMatch[0], "");
         }
 
-        const statements = code.split(";").map(s => s.trim()).filter(s => s.length > 0);
-        let svgItems = "";
+        const statements = code.split(";").map((s) => s.trim()).filter(Boolean);
+        const svgElements = [];
 
-        const parseStatement = (stmt) => {
-            // 1. \coordinate (Name) at (x,y)
-            const coordM = stmt.match(/\\coordinate\s*\(([A-Za-z0-9_]+)\)\s*at\s*(\([^)]+\))/);
-            if (coordM) {
-                const pt = resolveCoord(coordM[2]);
-                if (pt) coordinates[coordM[1]] = pt;
-                return;
-            }
+        // 1. Extraer coordenadas
+        for (const stmt of statements) {
+            const m = stmt.match(/\\coordinate\s*\(([a-zA-Z0-9_]+)\)\s*at\s*\(([\d\.\-]+)\s*,\s*([\d\.\-]+)\)/);
+            if (m) coordinates[m[1]] = { x: parseFloat(m[2]), y: parseFloat(m[3]) };
 
-            // 2. \filldraw or \fill: \filldraw[...] (Point) circle (Radius)
-            const filldrawM = stmt.match(/\\(filldraw|fill)\s*(?:\[([\s\S]*?)\]\s*)?(\([^\)]+\)|[A-Za-z0-9_]+)\s*circle\s*\(([^)]+)\)/);
-            if (filldrawM) {
-                const opts = filldrawM[2] || "";
-                const pt = resolveCoord(filldrawM[3]);
-                if (pt) {
-                    let fill = "#FFB93E";
-                    if (opts.includes("BrandBlue")) fill = "#2563eb";
-                    if (opts.includes("BrandGreen")) fill = "#10b981";
-                    svgItems += `  <circle cx="${toX(pt.x)}" cy="${toY(pt.y)}" r="6" fill="${fill}" stroke="#ffffff" stroke-width="2" />\n`;
-                }
-                return;
-            }
-
-            // 3. \draw arc: \draw[->, ...] (x,y) arc[start angle=A, end angle=B, radius=R]
-            const arcM = stmt.match(/\\draw\s*(?:\[([\s\S]*?)\]\s*)?(\([^)]+\))\s*arc\[start angle=([\d\.\-]+),\s*end angle=([\d\.\-]+),\s*radius=([\d\.\-]+)\]/);
-            if (arcM) {
-                const opts = arcM[1] || "";
-                const pt = resolveCoord(arcM[2]);
-                const a1 = parseFloat(arcM[3]) * Math.PI / 180;
-                const a2 = parseFloat(arcM[4]) * Math.PI / 180;
-                const r = parseFloat(arcM[5]);
-
-                if (pt) {
-                    const cx = pt.x - r * Math.cos(a1);
-                    const cy = pt.y - r * Math.sin(a1);
-                    const x2 = cx + r * Math.cos(a2);
-                    const y2 = cy + r * Math.sin(a2);
-
-                    const p1x = toX(pt.x);
-                    const p1y = toY(pt.y);
-                    const p2x = toX(x2);
-                    const y2Px = toY(y2);
-                    const rPx = r * scale;
-
-                    let stroke = "#F59E0B";
-                    if (opts.includes("BrandGreen")) stroke = "#10B981";
-
-                    svgItems += `  <path d="M ${p1x} ${p1y} A ${rPx} ${rPx} 0 0 1 ${p2x} ${y2Px}" fill="none" stroke="${stroke}" stroke-width="2.5" marker-end="url(#arrowhead-arc-${diagramId})" />\n`;
-                }
-                return;
-            }
-
-            // 4. \draw line: \draw[...] (p1) -- (p2) (optional node...)
-            const lineM = stmt.match(/\\draw\s*(?:\[([\s\S]*?)\]\s*)?(\([^\)]+\)|[A-Za-z0-9_]+)\s*--\s*(\([^\)]+\)|[A-Za-z0-9_]+)([\s\S]*)?/);
-            if (lineM) {
-                const opts = lineM[1] || "";
-                const p1 = resolveCoord(lineM[2]);
-                const p2 = resolveCoord(lineM[3]);
-                const rest = lineM[4] || "";
-
-                if (p1 && p2) {
-                    const isDashed = opts.includes("dashed");
-                    const isArrow = opts.includes("->") || opts.includes("Latex");
-                    let stroke = "var(--text-muted, #94a3b8)";
-                    let strokeWidth = 2;
-                    let marker = isArrow ? `url(#arrowhead-axis-${diagramId})` : "";
-
-                    if (opts.includes("BrandBlue")) {
-                        stroke = "#2563eb";
-                        strokeWidth = 3;
-                        marker = `url(#arrowhead-blue-${diagramId})`;
-                    } else if (opts.includes("BrandGreen")) {
-                        stroke = "#10B981";
-                        strokeWidth = 3;
-                        marker = `url(#arrowhead-green-${diagramId})`;
-                    }
-
-                    svgItems += `  <line x1="${toX(p1.x)}" y1="${toY(p1.y)}" x2="${toX(p2.x)}" y2="${toY(p2.y)}" stroke="${stroke}" stroke-width="${strokeWidth}" ${isDashed ? 'stroke-dasharray="5 4"' : ""} ${marker ? `marker-end="${marker}"` : ""} />\n`;
-
-                    // Node inline at end of line: node[right] {$X$}
-                    const nodeInlineM = rest.match(/node(?:\[([^\]]*)\])?\s*\{([\s\S]*?)\}/);
-                    if (nodeInlineM) {
-                        const posOpt = nodeInlineM[1] || "right";
-                        const label = cleanMathText(nodeInlineM[2]);
-                        let dx = 10, dy = 5;
-                        let anchor = "start";
-                        if (posOpt.includes("above")) { dx = 0; dy = -10; anchor = "middle"; }
-                        else if (posOpt.includes("below")) { dx = 0; dy = 18; anchor = "middle"; }
-                        else if (posOpt.includes("left")) { dx = -14; dy = 5; anchor = "end"; }
-
-                        svgItems += `  <text x="${toX(p2.x) + dx}" y="${toY(p2.y) + dy}" fill="var(--text-primary, #0f172a)" font-family="'Outfit', sans-serif" font-size="14" font-weight="700" text-anchor="${anchor}">${label}</text>\n`;
-                    }
-                }
-                return;
-            }
-
-            // 5. Standalone \node[...] at (x,y) {label}
-            const nodeM = stmt.match(/\\node\s*(?:\[([\s\S]*?)\]\s*)?at\s*(\([^)]+\)|[A-Za-z0-9_]+)\s*\{([\s\S]*?)\}/);
-            if (nodeM) {
-                const posOpt = nodeM[1] || "";
-                const pt = resolveCoord(nodeM[2]);
-                const label = cleanMathText(nodeM[3]);
-
-                if (pt) {
-                    let dx = 8, dy = -6;
-                    let anchor = "start";
-                    if (posOpt.includes("below")) { dx = 0; dy = 18; anchor = "middle"; }
-                    else if (posOpt.includes("above right")) { dx = 8; dy = -10; anchor = "start"; }
-                    else if (posOpt.includes("above")) { dx = 0; dy = -10; anchor = "middle"; }
-                    else if (posOpt.includes("left")) { dx = -14; dy = 4; anchor = "end"; }
-                    else if (posOpt.includes("right")) { dx = 10; dy = 4; anchor = "start"; }
-
-                    svgItems += `  <text x="${toX(pt.x) + dx}" y="${toY(pt.y) + dy}" fill="var(--text-primary, #0f172a)" font-family="'Outfit', sans-serif" font-size="13" font-weight="600" text-anchor="${anchor}">${label}</text>\n`;
-                }
-                return;
-            }
-        };
-
-        statements.forEach(s => parseStatement(s));
-
-        // Scope para diagrama 7
-        if (scopeBody) {
-            const shiftPt = resolveCoord(scopeShift) || { x: 0, y: 0 };
-            const sX = toX(shiftPt.x);
-            const sY = toY(shiftPt.y);
-            const scopeStmts = scopeBody.split(";").map(s => s.trim()).filter(s => s.length > 0);
-
-            let scopeSvg = "";
-            scopeStmts.forEach(stmt => {
-                const rm = stmt.match(/rectangle\s*(\([^)]+\))/);
-                if (rm) {
-                    scopeSvg += `    <rect x="${-0.4 * scale}" y="${-0.3 * scale}" width="${0.8 * scale}" height="${0.6 * scale}" fill="rgba(37,99,235,0.25)" stroke="#2563eb" stroke-width="2" rx="4" />\n`;
-                }
-                const lm = stmt.match(/\\draw\s*(?:\[([\s\S]*?)\]\s*)?\(([\d\.\-]+),([\d\.\-]+)\)\s*--\s*\(([\d\.\-]+),([\d\.\-]+)\)([\s\S]*)?/);
-                if (lm) {
-                    const x1 = parseFloat(lm[2]) * scale;
-                    const y1 = -parseFloat(lm[3]) * scale;
-                    const x2 = parseFloat(lm[4]) * scale;
-                    const y2 = -parseFloat(lm[5]) * scale;
-                    const rest = lm[6] || "";
-                    scopeSvg += `    <line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#10B981" stroke-width="2.5" marker-end="url(#arrowhead-green-${diagramId})" />\n`;
-                    const nm = rest.match(/node(?:\[([^\]]*)\])?\s*\{([\s\S]*?)\}/);
-                    if (nm) {
-                        const label = cleanMathText(nm[2]);
-                        scopeSvg += `    <text x="${x2 + 8}" y="${y2}" fill="#10B981" font-family="'Outfit', sans-serif" font-size="13" font-weight="700">${label}</text>\n`;
-                    }
-                }
-            });
-
-            const svgRot = -scopeRotate;
-            svgItems += `  <g transform="translate(${sX}, ${sY}) rotate(${svgRot})">\n${scopeSvg}  </g>\n`;
+            const nodeCoord = stmt.match(/\\node\s*(?:\[[^\]]*\])?\s*\(([a-zA-Z0-9_]+)\)\s*at\s*\(([\d\.\-]+)\s*,\s*([\d\.\-]+)\)/);
+            if (nodeCoord) coordinates[nodeCoord[1]] = { x: parseFloat(nodeCoord[2]), y: parseFloat(nodeCoord[3]) };
         }
 
+        // 2. Procesar sentencias
+        for (const stmt of statements) {
+            if (stmt.startsWith("\\coordinate")) continue;
+
+            // \filldraw para puntos
+            if (stmt.startsWith("\\filldraw") || stmt.startsWith("\\fill")) {
+                const ptMatch = stmt.match(/(?:\\filldraw|\\fill)\s*(?:\[([^\]]*)\])?\s*([^\s;]+)\s*circle\s*\(([^)]+)\)/);
+                if (ptMatch) {
+                    const pt = resolveCoord(ptMatch[2]);
+                    if (pt) {
+                        svgElements.push(
+                            `<circle cx="${toX(pt.x)}" cy="${toY(pt.y)}" r="4.5" fill="#2563eb" stroke="#ffffff" stroke-width="1.5" />`
+                        );
+                    }
+                }
+            }
+
+            // \draw para líneas, vectores y arcos
+            if (stmt.startsWith("\\draw")) {
+                const optMatch = stmt.match(/\\draw\s*\[(.*?)\]/);
+                const optStr = optMatch ? optMatch[1] : "";
+                const isDashed = optStr.includes("dashed");
+                const hasArrow = optStr.includes("->") || optStr.includes("Latex") || optStr.includes("-{");
+
+                let strokeColor = "#334155";
+                let markerAttr = "";
+                let strokeW = 1.8;
+
+                if (optStr.includes("BrandBlue") || optStr.includes("blue")) {
+                    strokeColor = "#1e3c78";
+                    if (hasArrow) markerAttr = `marker-end="url(#arr-blue-${diagramId})"`;
+                    strokeW = 2.4;
+                } else if (optStr.includes("BrandGreen") || optStr.includes("green")) {
+                    strokeColor = "#14c486";
+                    if (hasArrow) markerAttr = `marker-end="url(#arr-green-${diagramId})"`;
+                    strokeW = 2.4;
+                } else if (optStr.includes("BrandYellow") || optStr.includes("orange")) {
+                    strokeColor = "#f59e0b";
+                    if (hasArrow) markerAttr = `marker-end="url(#arr-yellow-${diagramId})"`;
+                    strokeW = 2.0;
+                } else if (hasArrow) {
+                    strokeColor = "#0f172a";
+                    markerAttr = `marker-end="url(#arr-axis-${diagramId})"`;
+                    strokeW = 2.0;
+                }
+
+                if (isDashed) {
+                    strokeColor = "#94a3b8";
+                    strokeW = 1.4;
+                }
+
+                // Arco angular \draw[->] (p1) arc (start:end:radius)
+                const arcMatch = stmt.match(/arc\s*\(([\d\.\-]+):([\d\.\-]+):([\d\.\-]+)\)/);
+                if (arcMatch) {
+                    const startAngle = parseFloat(arcMatch[1]);
+                    const endAngle = parseFloat(arcMatch[2]);
+                    const rUnits = parseFloat(arcMatch[3]);
+                    const rPx = rUnits * scale;
+
+                    const pMatch = stmt.match(/\\draw[^)]*\(([^\)]+)\)\s*arc/);
+                    let center = { x: 0, y: 0 };
+                    if (pMatch) {
+                        const parsed = resolveCoord(pMatch[1]);
+                        if (parsed) center = parsed;
+                    }
+
+                    const cx = toX(center.x);
+                    const cy = toY(center.y);
+                    const a1 = (startAngle * Math.PI) / 180;
+                    const a2 = (endAngle * Math.PI) / 180;
+                    const x1 = Math.round(cx + rPx * Math.cos(a1));
+                    const y1 = Math.round(cy - rPx * Math.sin(a1));
+                    const x2 = Math.round(cx + rPx * Math.cos(a2));
+                    const y2 = Math.round(cy - rPx * Math.sin(a2));
+                    const largeArc = Math.abs(endAngle - startAngle) > 180 ? 1 : 0;
+                    const sweep = endAngle > startAngle ? 0 : 1;
+
+                    svgElements.push(
+                        `<path d="M ${x1} ${y1} A ${rPx} ${rPx} 0 ${largeArc} ${sweep} ${x2} ${y2}" fill="none" stroke="#f59e0b" stroke-width="1.8" marker-end="url(#arr-yellow-${diagramId})" />`
+                    );
+                }
+
+                // Segmentos de línea con --
+                const cleanForPoints = stmt.replace(/\[.*?\]/g, "");
+                const ptTokens = cleanForPoints.split("--").map((p) => p.trim());
+                if (ptTokens.length >= 2) {
+                    for (let i = 0; i < ptTokens.length - 1; i++) {
+                        const pStart = resolveCoord(ptTokens[i]);
+                        const pEnd = resolveCoord(ptTokens[i + 1]);
+
+                        if (pStart && pEnd) {
+                            const dashAttr = isDashed ? 'stroke-dasharray="4,4"' : "";
+                            svgElements.push(
+                                `<line x1="${toX(pStart.x)}" y1="${toY(pStart.y)}" x2="${toX(pEnd.x)}" y2="${toY(pEnd.y)}" stroke="${strokeColor}" stroke-width="${strokeW}" ${dashAttr} ${markerAttr} stroke-linecap="round" />`
+                            );
+                        }
+                    }
+                }
+            }
+
+            // \node para etiquetas
+            const nodeRegex = /\\node\s*(?:\[([^\]]*)\])?\s*(?:\([^)]*\))?\s*(?:at\s*\(([^)]+)\))?\s*\{([^}]*)\}/g;
+            let nm;
+            while ((nm = nodeRegex.exec(stmt)) !== null) {
+                const nodeOpts = nm[1] || "";
+                const atStr = nm[2];
+                const rawText = nm[3];
+                if (!rawText.trim()) continue;
+
+                let pos = atStr ? resolveCoord(atStr) : null;
+                if (!pos) {
+                    const fallbackPt = stmt.match(/--\s*\(?([^)\s]+)\)?\s*node/);
+                    if (fallbackPt) pos = resolveCoord(fallbackPt[1]);
+                }
+
+                if (pos) {
+                    let dx = 0;
+                    let dy = 0;
+                    let textAnchor = "middle";
+
+                    if (nodeOpts.includes("right")) { dx = 10; textAnchor = "start"; }
+                    if (nodeOpts.includes("left")) { dx = -10; textAnchor = "end"; }
+                    if (nodeOpts.includes("above")) { dy = -10; }
+                    if (nodeOpts.includes("below")) { dy = 16; }
+
+                    const txt = cleanMathText(rawText);
+                    const color = nodeOpts.includes("blue") ? "#1e3c78" : (nodeOpts.includes("green") ? "#14c486" : "#0f172a");
+
+                    svgElements.push(
+                        `<text x="${toX(pos.x) + dx}" y="${toY(pos.y) + dy}" fill="${color}" font-family="Outfit, sans-serif" font-weight="700" font-size="13px" text-anchor="${textAnchor}">${this.escapeHtml(txt)}</text>`
+                    );
+                }
+            }
+        }
+
+        // Procesar contenido dentro del scope si existe (robot local rotado)
+        if (scopeShift) {
+            const scopeElements = [];
+            const scopeStmts = scopeBody.split(";").map((s) => s.trim()).filter(Boolean);
+
+            for (const s of scopeStmts) {
+                if (s.startsWith("\\draw")) {
+                    const hasArrow = s.includes("->") || s.includes("Latex");
+                    const optMatch = s.match(/\\draw\s*\[(.*?)\]/);
+                    const optStr = optMatch ? optMatch[1] : "";
+                    const isGreen = optStr.includes("BrandGreen") || optStr.includes("green");
+
+                    const cleanS = s.replace(/\[.*?\]/g, "");
+                    const pts = cleanS.split("--").map((p) => p.trim());
+                    if (pts.length >= 2) {
+                        const p1 = resolveCoord(pts[0]);
+                        const p2 = resolveCoord(pts[1]);
+                        if (p1 && p2) {
+                            const col = isGreen ? "#14c486" : "#0f172a";
+                            const mAttr = hasArrow ? `marker-end="url(#arr-green-${diagramId})"` : "";
+                            scopeElements.push(
+                                `<line x1="${p1.x * scale}" y1="${-p1.y * scale}" x2="${p2.x * scale}" y2="${-p2.y * scale}" stroke="${col}" stroke-width="2.2" ${mAttr} stroke-linecap="round" />`
+                            );
+                        }
+                    }
+
+                    // Etiquetas dentro del scope
+                    const nmScope = s.match(/node\s*(?:\[([^\]]*)\])?\s*\{([^}]*)\}/);
+                    if (nmScope) {
+                        const opts = nmScope[1] || "";
+                        const raw = nmScope[2];
+                        let dx = 8;
+                        let dy = 0;
+                        if (opts.includes("above")) dy = -8;
+                        if (opts.includes("right")) dx = 10;
+                        const txt = cleanMathText(raw);
+                        scopeElements.push(
+                            `<text x="${dx}" y="${dy}" fill="#14c486" font-family="Outfit, sans-serif" font-weight="700" font-size="13px">${this.escapeHtml(txt)}</text>`
+                        );
+                    }
+                }
+            }
+
+            // Rectángulo del chasis del robot
+            scopeElements.unshift(
+                `<rect x="-18" y="-14" width="36" height="28" rx="4" fill="rgba(30, 60, 120, 0.15)" stroke="#1e3c78" stroke-width="2" />`
+            );
+
+            const scopeSvg = `<g transform="translate(${toX(scopeShift.x)}, ${toY(scopeShift.y)}) rotate(${-scopeRotate})">${scopeElements.join("\n")}</g>`;
+            svgElements.push(scopeSvg);
+        }
+
+        // Definiciones de marcadores de flecha SVG
         const defs = `
             <defs>
-                <marker id="arrowhead-arc-${diagramId}" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
-                    <polygon points="0 1, 8 4, 0 7" fill="#F59E0B" />
+                <marker id="arr-axis-${diagramId}" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#0f172a" />
                 </marker>
-                <marker id="arrowhead-green-${diagramId}" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
-                    <polygon points="0 1, 8 4, 0 7" fill="#10B981" />
+                <marker id="arr-blue-${diagramId}" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#1e3c78" />
                 </marker>
-                <marker id="arrowhead-blue-${diagramId}" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
-                    <polygon points="0 1, 8 4, 0 7" fill="#2563eb" />
+                <marker id="arr-green-${diagramId}" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#14c486" />
                 </marker>
-                <marker id="arrowhead-axis-${diagramId}" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
-                    <polygon points="0 1, 7 3.5, 0 6" fill="#94A3B8" />
+                <marker id="arr-yellow-${diagramId}" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#f59e0b" />
                 </marker>
             </defs>
         `;
 
+        const svgItems = svgElements.join("\n");
         const wrapperId = `tikz-diagram-${diagramId}`;
         return `
             <div class="tikz-diagram-wrapper" id="${wrapperId}">
@@ -804,21 +828,22 @@ class LatexParser {
                     <div class="tikz-card-header">
                         <span class="tikz-badge"><i class="fa fa-chart-line"></i> Esquema Geométrico Vectorial</span>
                         <div class="tikz-zoom-controls">
-                            <button type="button" class="btn-tikz-zoom" onclick="window.RoboDocsApp && window.RoboDocsApp.zoomDiagram('${wrapperId}', -0.2)" title="Reducir zoom (−)">
+                            <button type="button" class="btn-tikz-zoom" onclick="window.roboDocs && window.roboDocs.zoomDiagram('${wrapperId}', -0.2)" title="Reducir zoom (−)">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/><line x1="8" x2="14" y1="11" y2="11"/></svg>
                             </button>
                             <span class="tikz-zoom-level" id="zoom-val-${wrapperId}">100%</span>
-                            <button type="button" class="btn-tikz-zoom" onclick="window.RoboDocsApp && window.RoboDocsApp.zoomDiagram('${wrapperId}', 0.2)" title="Aumentar zoom (+)">
+                            <button type="button" class="btn-tikz-zoom" onclick="window.roboDocs && window.roboDocs.zoomDiagram('${wrapperId}', 0.2)" title="Aumentar zoom (+)">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/><line x1="11" x2="11" y1="8" y2="14"/><line x1="8" x2="14" y1="11" y2="11"/></svg>
                             </button>
-                            <button type="button" class="btn-tikz-zoom reset" onclick="window.RoboDocsApp && window.RoboDocsApp.resetDiagramZoom('${wrapperId}')" title="Restablecer tamaño">↺</button>
+                            <button type="button" class="btn-tikz-zoom reset" onclick="window.roboDocs && window.roboDocs.resetDiagramZoom('${wrapperId}')" title="Restablecer tamaño (100%)">↺</button>
+                            <button type="button" class="btn-tikz-zoom fullscreen" onclick="window.roboDocs && window.roboDocs.openDiagramModal('${wrapperId}')" title="Ver en pantalla completa">⛶</button>
                         </div>
                     </div>
                     <div class="tikz-svg-viewport">
                         <div class="tikz-zoomable-content" id="zoom-content-${wrapperId}">
                             <svg viewBox="0 0 ${width} ${height}" class="tikz-svg-canvas" xmlns="http://www.w3.org/2000/svg">
                                 ${defs}
-                                <!-- Cuadrícula de fondo -->
+                                <!-- Cuadrícula sutil de fondo -->
                                 <line x1="${originX}" y1="20" x2="${originX}" y2="${height - 20}" stroke="rgba(148,163,184,0.18)" stroke-width="1" />
                                 <line x1="20" y1="${originY}" x2="${width - 20}" y2="${originY}" stroke="rgba(148,163,184,0.18)" stroke-width="1" />
                                 ${svgItems}
@@ -834,12 +859,10 @@ class LatexParser {
      * Ecuaciones display: \[ ... \] o \begin{equation}
      */
     processDisplayMath(tex) {
-        // \[ ... \]
         tex = tex.replace(/\\\[([\s\S]*?)\\\]/g, (match, math) => {
             return `<div class="latex-equation" data-math="${this.escapeHtml(math.trim())}">$$\n${math.trim()}\n$$</div>`;
         });
 
-        // \begin{equation} ... \end{equation}
         tex = tex.replace(/\\begin\{equation\*?\}([\s\S]*?)\\end\{equation\*?\}/g, (match, math) => {
             return `<div class="latex-equation" data-math="${this.escapeHtml(math.trim())}">$$\n${math.trim()}\n$$</div>`;
         });
@@ -874,7 +897,6 @@ class LatexParser {
      * Manejo de imágenes y logos: \smartimage y \smartlogo
      */
     processImages(tex) {
-        // \smartimage[ancho]{ruta}
         tex = tex.replace(/\\smartimage(?:\[[^\]]*\])?\{([^}]+)\}/g, (match, path) => {
             const cleanPath = path.trim();
             return `
@@ -884,9 +906,8 @@ class LatexParser {
             `;
         });
 
-        // \smartlogo[alto]{ruta}
         tex = tex.replace(/\\smartlogo(?:\[[^\]]*\])?\{([^}]+)\}/g, (match, path) => {
-            return `<span class="smart-logo-badge"><i class="fa fa-university"></i> ${path.split('/').pop()}</span>`;
+            return `<img src="${path.trim()}" class="smart-logo-img" alt="Logo Institucional" />`;
         });
 
         return tex;
@@ -908,25 +929,19 @@ class LatexParser {
         text = text.replace(/\\underline\{([\s\S]*?)\}/g, '<u>$1</u>');
 
         // Colores en texto: \textcolor{BrandBlue}{texto}
-        text = text.replace(/\\textcolor\{([^}]+)\}\{([\s\S]*?)\}/g, (match, colorName, content) => {
-            let color = '#3B82F6';
-            if (colorName.includes('BrandGreen')) color = '#10B981';
-            if (colorName.includes('BrandYellow')) color = '#F59E0B';
-            if (colorName.includes('white')) color = '#ffffff';
-            if (colorName.includes('black')) color = '#0f172a';
-            return `<span style="color: ${color};">${content}</span>`;
-        });
+        text = text.replace(/\\textcolor\{BrandBlue\}\{([\s\S]*?)\}/g, '<span style="color: var(--brand-blue); font-weight: 600;">$1</span>');
+        text = text.replace(/\\textcolor\{BrandGreen\}\{([\s\S]*?)\}/g, '<span style="color: var(--brand-green); font-weight: 600;">$1</span>');
+        text = text.replace(/\\textcolor\{BrandYellow\}\{([\s\S]*?)\}/g, '<span style="color: var(--brand-yellow); font-weight: 600;">$1</span>');
+        text = text.replace(/\\textcolor\{black\}\{([\s\S]*?)\}/g, '<span>$1</span>');
 
-        // Matemáticas inline: $ ... $
-        text = text.replace(/(^|[^\$])\$([^\$]+?)\$(?!\$)/g, (match, prefix, math) => {
-            return `${prefix}<span class="latex-inline-math" data-math="${this.escapeHtml(math.trim())}">$${math.trim()}$</span>`;
-        });
+        // Símbolos matemáticos inline comunes que puedan estar fuera de $...$
+        text = text.replace(/\\theta/g, '$\\theta$');
+        text = text.replace(/\\alpha/g, '$\\alpha$');
+        text = text.replace(/\\rho/g, '$\\rho$');
+        text = text.replace(/\\circ/g, '$^\\circ$');
 
-        // Escape de caracteres especiales
-        text = text.replace(/\\%/g, '%');
-        text = text.replace(/\\&/g, '&amp;');
-        text = text.replace(/\\_/g, '_');
-        text = text.replace(/\\#/g, '#');
+        // Limpieza de espaciados pequeños
+        text = text.replace(/\\\\/g, '<br>');
 
         return text;
     }
@@ -939,6 +954,9 @@ class LatexParser {
         return text
             .replace(/\\texorpdfstring\{[^}]*\}\{([^}]+)\}/g, '$1')
             .replace(/\$([^\$]+)\$/g, '$1')
+            .replace(/\\theta/g, 'θ')
+            .replace(/\\alpha/g, 'α')
+            .replace(/\\rho/g, 'ρ')
             .replace(/\\textbf\{([^}]+)\}/g, '$1')
             .replace(/\\textit\{([^}]+)\}/g, '$1')
             .replace(/\\\\/g, ' ')
@@ -950,9 +968,6 @@ class LatexParser {
         return text.replace(/\\texorpdfstring\{([^}]+)\}\{[^}]*\}/g, '$1');
     }
 
-    /**
-     * Encuentra la llave de cierre correspondiente considerando anidamientos
-     */
     findMatchingBrace(str, openIndex) {
         let depth = 0;
         for (let i = openIndex; i < str.length; i++) {
@@ -973,24 +988,23 @@ class LatexParser {
             { id: 'sec-intro', number: '1.', text: 'Especificación de la Plantilla', level: 1 },
             { id: 'sec-palette', number: '2.', text: 'Paleta de Colores Institucionales', level: 1 },
             { id: 'sec-docent-blocks', number: '3.', text: 'Bloques Docentes Personalizados', level: 1 },
-            { id: 'sec-code-envs', number: '4.', text: 'Entornos de Código Minted / Tcolorbox', level: 1 },
-            { id: 'sec-master-slides', number: '5.', text: 'Diapositivas Maestras y Cabeceras', level: 1 }
+            { id: 'sec-code-envs', number: '4.', text: 'Entornos de Código Minted / Tcolorbox', level: 1 }
         ];
 
         const html = `
             <article class="template-doc-view">
                 <header class="template-hero-header">
+                    <img src="Template/LogoPoli.png" class="template-hero-logo" alt="Politécnico Colombiano Jaime Isaza Cadavid" />
                     <div class="hero-tag"><i class="fa fa-palette"></i> Plantilla Institucional Beamer</div>
                     <h1 class="hero-title">template-slide.tex</h1>
                     <p class="hero-description">
                         Guía de referencia completa y catálogo interactivo de macros docentes, paleta cromática,
-                        entornos de programación y estructura modular para la docencia en Robótica e Inteligencia Artificial.
+                        entornos de programación y estructura modular para la docencia en Robótica del Servicio e Inteligencia Artificial.
                     </p>
                 </header>
 
                 <section id="sec-intro" class="template-section-card">
                     <h2><span class="sec-badge">1</span> Configuración Institucional</h2>
-                    <p>La plantilla establece las constantes del curso y las directivas de compilación:</p>
                     <div class="spec-grid-cards">
                         <div class="spec-item-card">
                             <span class="spec-label">Institución</span>
@@ -1019,7 +1033,7 @@ class LatexParser {
                             <div class="swatch-info">
                                 <strong>BrandBlue</strong>
                                 <code>#1E3C78</code>
-                                <small>Cabeceras de diapositiva e IdeaTitle</small>
+                                <small>Cabeceras de diapositiva y bloques IdeaTitle</small>
                             </div>
                         </div>
                         <div class="color-swatch-card" style="--swatch-color: #14C486;">
@@ -1027,15 +1041,15 @@ class LatexParser {
                             <div class="swatch-info">
                                 <strong>BrandGreen</strong>
                                 <code>#14C486</code>
-                                <small>Líneas de acento y PracticeTitle</small>
+                                <small>Líneas de acento de portada y PracticeTitle</small>
                             </div>
                         </div>
-                        <div class="color-swatch-card" style="--swatch-color: #FFB93E;">
+                        <div class="color-swatch-card" style="--swatch-color: #007800;">
                             <div class="swatch-preview"></div>
                             <div class="swatch-info">
-                                <strong>BrandYellow</strong>
-                                <code>#FFB93E</code>
-                                <small>Puntos geométricos y QuestionTitle</small>
+                                <strong>ResultTitle</strong>
+                                <code>#007800</code>
+                                <small>Bloques de resultados y comprobaciones</small>
                             </div>
                         </div>
                         <div class="color-swatch-card" style="--swatch-color: #5A46A0;">
@@ -1046,44 +1060,19 @@ class LatexParser {
                                 <small>Bloques de definición teórica</small>
                             </div>
                         </div>
-                        <div class="color-swatch-card" style="--swatch-color: #A01E1E;">
-                            <div class="swatch-preview"></div>
-                            <div class="swatch-info">
-                                <strong>WarnTitle</strong>
-                                <code>#A01E1E</code>
-                                <small>Alertas de atención y advertencias</small>
-                            </div>
-                        </div>
-                        <div class="color-swatch-card" style="--swatch-color: #1C5C91;">
-                            <div class="swatch-preview"></div>
-                            <div class="swatch-info">
-                                <strong>CompareTitle</strong>
-                                <code>#1C5C91</code>
-                                <small>Comparaciones y contrastes</small>
-                            </div>
-                        </div>
                     </div>
                 </section>
 
                 <section id="sec-docent-blocks" class="template-section-card">
                     <h2><span class="sec-badge">3</span> Bloques Docentes Enriquecidos</h2>
-                    <p>Entornos pedagógicos definidos con <code>\\NewDocumentCommand</code>:</p>
                     <div class="docent-samples-container">
                         <div class="docent-block block-idea">
                             <div class="block-title-row"><span class="block-icon">💡</span><span class="block-title-text">\\Idea{Concepto fundamental}</span></div>
                             <div class="block-content-body">La rotación en el plano permite describir cambios de orientación entre el sistema local del robot y el sistema global.</div>
                         </div>
-                        <div class="docent-block block-def">
-                            <div class="block-title-row"><span class="block-icon">📖</span><span class="block-title-text">\\DefBlock[Matriz Ortogonal]{Definición}</span></div>
-                            <div class="block-content-body">Una matriz $R$ es ortogonal si satisface $R^{-1} = R^T$ y $\det(R) = +1$, preservando distancias y ángulos.</div>
-                        </div>
-                        <div class="docent-block block-practice">
-                            <div class="block-title-row"><span class="block-icon">💻</span><span class="block-title-text">\\Practice{Ejercicio en Python}</span></div>
-                            <div class="block-content-body">Implementa en NumPy la función <code>rotacion_2d(theta)</code> y valida la propiedad de ortogonalidad con <code>np.linalg.det</code>.</div>
-                        </div>
-                        <div class="docent-block block-warning">
-                            <div class="block-title-row"><span class="block-icon">⚠️</span><span class="block-title-text">\\Warning{Convención angular}</span></div>
-                            <div class="block-content-body">Recuerda que $\\theta > 0$ representa giro antihorario y $\\theta < 0$ giro horario.</div>
+                        <div class="docent-block block-result">
+                            <div class="block-title-row"><span class="block-icon">✅</span><span class="block-title-text">\\Result{Ortogonalidad}</span></div>
+                            <div class="block-content-body">Las matrices de rotación son matrices ortogonales que satisfacen $R^{-1} = R^T$.</div>
                         </div>
                     </div>
                 </section>
@@ -1093,7 +1082,7 @@ class LatexParser {
                     <div class="code-samples-preview">
                         ${this.renderCodeBlockCard(
                             "import numpy as np\n\ndef matriz_rotacion_2d(theta_rad):\n    c, s = np.cos(theta_rad), np.sin(theta_rad)\n    return np.array([[c, -s], [s, c]])\n\nR_90 = matriz_rotacion_2d(np.pi / 2)\nprint('R(90°):\\n', np.round(R_90, 4))",
-                            "Python (Monokai Dark)",
+                            "Python 3 (NumPy)",
                             "dark"
                         )}
                     </div>
@@ -1107,17 +1096,8 @@ class LatexParser {
             toc: this.toc,
             raw: rawContent,
             isBeamer: true,
-            slideCount: 5
+            slideCount: 4
         };
-    }
-
-    slugify(str) {
-        return str
-            .toLowerCase()
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .replace(/[^a-z0-9]+/g, '-')
-            .replace(/^-+|-+$/g, '');
     }
 
     escapeHtml(str) {
