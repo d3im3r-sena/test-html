@@ -1,0 +1,42 @@
+[
+  {
+    "id": "cinematica-6dof",
+    "filename": "cinematica_manipulador_6dof.tex",
+    "title": "Cinemática Directa e Inversa de Manipuladores Industriales de 6-DOF",
+    "category": "Cinemática & Geometría",
+    "author": "Dr. Carlos E. Morales & Laboratorio de Robótica Nova",
+    "date": "Septiembre 2026",
+    "description": "Formulación matemática completa mediante parámetros Denavit-Hartenberg (D-H), matrices de transformación homogénea, jacobiano analítico y resolución de singularidades en muñecas esféricas.",
+    "tags": ["Denavit-Hartenberg", "Matrices Homogéneas", "Jacobiano", "Singularidades"]
+  },
+  {
+    "id": "control-dinamica",
+    "filename": "control_dinamica_trayectorias.tex",
+    "title": "Control Dinámico por Par Computado y Algoritmos PID en Robótica Industrial",
+    "category": "Dinámica & Control",
+    "author": "Ing. Elena Restrepo & Equipo de Automatización",
+    "date": "Agosto 2026",
+    "description": "Modelado dinámico según formulación Euler-Lagrange, sintonización de lazos PID y algoritmos de control no lineal para seguimiento preciso de trayectorias en corte láser y soldadura por arco.",
+    "tags": ["Euler-Lagrange", "Par Computado", "Control PID", "Servomotores"]
+  },
+  {
+    "id": "seguridad-cobots",
+    "filename": "seguridad_cobots_iso.tex",
+    "title": "Normativa de Seguridad Funcional en Robots Colaborativos: ISO 10218 e ISO/TS 15066",
+    "category": "Seguridad & Normativa",
+    "author": "Comité Técnico de Seguridad Industrial Nova",
+    "date": "Julio 2026",
+    "description": "Guía práctica sobre los 4 modos de colaboración humano-robot, límites de presión y transferencia de energía (PFL), evaluación biomecánica de colisiones y validación de escáneres de seguridad.",
+    "tags": ["ISO 10218", "ISO/TS 15066", "Cobots", "Seguridad Funcional", "PFL"]
+  },
+  {
+    "id": "vision-artificial",
+    "filename": "vision_artificial_pick_and_place.tex",
+    "title": "Sistemas de Visión Artificial y Calibración Ojo-en-Mano para Pick-and-Place",
+    "category": "Percepción & Visión",
+    "author": "Dra. Sofía Alarcón & Unidad de Visión Robótica",
+    "date": "Junio 2026",
+    "description": "Algoritmos de calibración de cámaras industriales (Tsai / Zhang), matrices intrínsecas y extrínsecas, compensación de distorsión radial y segmentación para agarre a alta velocidad.",
+    "tags": ["Calibración Eye-in-Hand", "Matrices de Cámara", "Pose 3D", "Pick and Place"]
+  }
+]

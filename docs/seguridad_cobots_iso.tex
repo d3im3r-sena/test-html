@@ -1,0 +1,84 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{hyperref}
+
+\title{Normativa de Seguridad Funcional en Robots Colaborativos: ISO 10218 e ISO/TS 15066}
+\author{Comité de Seguridad y Robótica Industrial \\
+\textit{Centro de Investigación y Transferencia Tecnológica Nova}}
+\date{Julio de 2026}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+La coexistencia e interacción cercana entre operadores humanos y manipuladores robóticos sin vallado perimetral físico exige un marco normativo estricto para mitigar riesgos de aprisionamiento, choque o colisión. En este artículo se analiza en profundidad la arquitectura de seguridad requerida bajo las normas internacionales ISO 10218-1/2 (Requisitos de seguridad para robots industriales) y la especificación técnica ISO/TS 15066 (Robots colaborativos). Se detallan los cuatro métodos de operación colaborativa, las fórmulas de distancia de separación protectora en tiempo real y los umbrales biomecánicos de fuerza y presión máxima para contactos transitorios y cuasi-estáticos.
+\end{abstract}
+
+\section{Introducción al Concepto Colaborativo}
+Un sistema robótico colaborativo (Cobot) no es intrínsecamente seguro por sí mismo; la seguridad funcional depende de la aplicación integral, incluyendo el efector final (gripper), la geometría de la pieza manipulada y el entorno de trabajo compartido. La norma ISO 10218 define el espacio colaborativo como la zona donde robot y operario pueden desempeñar tareas simultáneamente.
+
+\section{Los Cuatro Modos de Operación Colaborativa}
+La especificación ISO/TS 15066 estipula cuatro métodos técnicos de operación colaborativa:
+\begin{enumerate}
+    \item \textbf{Parada Monitoreada con Calificación de Seguridad (SMS):} El robot detiene sus motores manteniendo la energía de los frenos cuando el humano ingresa al espacio de trabajo.
+    \item \textbf{Guiado Manual (Hand Guiding):} El operador controla el movimiento del robot mediante una empuñadura ergonómica dotada de un sensor de fuerza-par y un pulsador de validación de 3 posiciones (deadman switch).
+    \item \textbf{Monitoreo de Velocidad y Separación (SSM):} Se mantiene una distancia de seguridad dinámica en función de las velocidades relativas detectadas por escáneres láser de seguridad.
+    \item \textbf{Limitación de Potencia y Fuerza (PFL):} En caso de contacto inevitable, la transferencia de energía mecánica no supera los umbrales biomecánicos de dolor o lesión.
+\end{enumerate}
+
+\section{Monitoreo de Velocidad y Separación: Distancia Protectora $S_p$}
+Para garantizar que el robot se detenga por completo antes de que el operario pueda alcanzarlo, la distancia de separación mínima $S_p(t_0)$ en el instante $t_0$ se calcula como:
+\begin{equation}
+S_p(t_0) = S_h + S_r + S_s + C + Z_d + Z_r
+\end{equation}
+donde:
+\begin{itemize}
+    \item $S_h = v_h \cdot (T_r + T_b)$ es la distancia recorrida por el operador con velocidad de aproximación estándar $v_h = 1600\,\text{mm/s}$ (según ISO 13855).
+    \item $S_r = v_r \cdot T_r$ es la distancia recorrida por el robot durante el tiempo de reacción del sistema de detección $T_r$.
+    \item $S_s$ es la distancia de frenado mecánico propia del robot desde velocidad máxima hasta detención total:
+    \begin{equation}
+    S_s = \frac{v_r^2}{2 a_{stop}}
+    \end{equation}
+    \item $C$ es la distancia de penetración intrínseca del escáner láser.
+    \item $Z_d$ y $Z_r$ representan tolerancias de medición y posición angular.
+\end{itemize}
+
+\section{Límites Biomecánicos de Potencia y Fuerza (PFL)}
+La norma ISO/TS 15066 clasifica los contactos físicos en dos categorías:
+\begin{itemize}
+    \item \textbf{Contacto Cuasi-Estático:} La extremidad del operador queda atrapada entre el efector del robot y una superficie fija rígida.
+    \item \textbf{Contacto Transitorio (Dinámico):} El robot golpea una parte del cuerpo libre, disipando energía en el retroceso inercial.
+\end{itemize}
+
+\subsection{Tabla de Umbrales Biomecánicos por Región Corporal}
+La siguiente tabla resume los valores máximos admisibles de fuerza máxima $F_{max}$ y presión $P_{max}$ antes de inducir dolor o hematoma:
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lcccc}
+\hline
+\textbf{Región Corporal} & \textbf{$F_{cuasi}$ [N]} & \textbf{$P_{cuasi}$ [$\text{N/cm}^2$]} & \textbf{$F_{trans}$ [N]} & \textbf{$P_{trans}$ [$\text{N/cm}^2$]} \\
+\hline
+Cráneo / Frente & 130 & 110 & 260 & 220 \\
+Cuello y Garganta & 140 & 140 & 280 & 280 \\
+Brazo y Codo & 160 & 180 & 320 & 360 \\
+Mano y Dedos & 140 & 190 & 280 & 380 \\
+Pecho y Costillas & 140 & 130 & 280 & 260 \\
+Muslo y Rodilla & 220 & 220 & 440 & 440 \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Arquitectura de Control según ISO 13849-1}
+Todos los lazos de paro de emergencia, monitoreo de posición segura (SLP), velocidad segura (SLS) y desconexión segura de par (STO) deben cumplir como mínimo con el Nivel de Rendimiento de Seguridad \textbf{PL d, Categoría 3}, garantizando redundancia dual-channel y tolerancia a fallos simples de hardware.
+
+\begin{thebibliography}{9}
+\bibitem{iso10218} ISO, \textit{ISO 10218-1:2011 Robots and robotic devices - Safety requirements for industrial robots}, International Organization for Standardization, 2011.
+\bibitem{isots15066} ISO, \textit{ISO/TS 15066:2016 Robots and robotic devices - Collaborative robots}, International Organization for Standardization, 2016.
+\bibitem{iso13849} ISO, \textit{ISO 13849-1:2015 Safety of machinery - Safety-related parts of control systems}, 2015.
+\end{thebibliography}
+
+\end{document}

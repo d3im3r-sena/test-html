@@ -3,14 +3,22 @@
  * Estrategia de caché avanzada y soporte offline completo
  */
 
-const CACHE_NAME = 'nova-cache-v1';
+const CACHE_NAME = 'nova-cache-v2';
 const STATIC_ASSETS = [
     './',
     './index.html',
+    './documentacion.html',
     './css/styles.css',
     './js/main.js',
+    './js/latex-parser.js',
+    './js/docs-viewer.js',
     './manifest.webmanifest',
     './manifest.json',
+    './docs/index.json',
+    './docs/cinematica_manipulador_6dof.tex',
+    './docs/control_dinamica_trayectorias.tex',
+    './docs/seguridad_cobots_iso.tex',
+    './docs/vision_artificial_pick_and_place.tex',
     './icons/icon.svg',
     './icons/icon-192.png',
     './icons/icon-512.png',

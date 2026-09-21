@@ -1,0 +1,80 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{hyperref}
+
+\title{Sistemas de Visión Artificial y Calibración Ojo-en-Mano para Aplicaciones Pick-and-Place}
+\author{Dra. Sofía Alarcón \and Ing. Javier Mendoza \\
+\textit{Laboratorio de Percepción y Visión Robótica, Centro Nova}}
+\date{Junio de 2026}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+El empaquetado y clasificación a alta velocidad en líneas industriales automatizadas requiere la sincronización milimétrica entre sensores ópticos de visión artificial y brazos robóticos SCARA o Delta (paralelos). Este artículo aborda la calibración fotogramétrica de cámaras industriales usando el modelo estenopeico (pinhole), la resolución de la ecuación matricial clásica de calibración ojo-en-mano (Hand-Eye Calibration) $AX = XB$, y la corrección de distorsión radial no lineal. Se complementa con algoritmos de seguimiento de cintas transportadoras (Conveyor Tracking) mediante encoders en cuadratura para trayectorias dinámicas de agarre.
+\end{abstract}
+
+\section{Modelo Geométrico de Cámara Estenopeica}
+La proyección de un punto tridimensional en el espacio de trabajo $P_w = [X_w, Y_w, Z_w, 1]^T$ sobre el plano de píxeles del sensor CMOS $p = [u, v, 1]^T$ se describe mediante la matriz de cámara proyectiva:
+\begin{equation}
+s \begin{bmatrix} u \\ v \\ 1 \end{bmatrix} = K \cdot [R_{c}^w \mid t_{c}^w] \cdot \begin{bmatrix} X_w \\ Y_w \\ Z_w \\ 1 \end{bmatrix}
+\end{equation}
+donde $s$ es un factor de escala proyectivo, y $K$ es la matriz intrínseca de calibración:
+\begin{equation}
+K = \begin{bmatrix}
+f_x & \gamma & c_x \\
+0 & f_y & c_y \\
+0 & 0 & 1
+\end{bmatrix}
+\end{equation}
+con $f_x, f_y$ como distancias focales en píxeles, $(c_x, c_y)$ las coordenadas del punto principal óptico y $\gamma$ el factor de sesgo angular (normalmente $\gamma = 0$).
+
+\subsection{Compensación de Distorsión de Lente}
+Las lentes ópticas de gran angular inducen distorsión radial y tangencial. Las coordenadas distorsionadas $(x_d, y_d)$ se corrigen usando los coeficientes de Brown-Conrady:
+\begin{align}
+x_d &= x (1 + k_1 r^2 + k_2 r^4 + k_3 r^6) + 2 p_1 x y + p_2 (r^2 + 2x^2) \\
+y_d &= y (1 + k_1 r^2 + k_2 r^4 + k_3 r^6) + p_1 (r^2 + 2y^2) + 2 p_2 x y
+\end{align}
+donde $r^2 = x^2 + y^2$, $(k_1, k_2, k_3)$ son los coeficientes radiales y $(p_1, p_2)$ los tangenciales.
+
+\section{Calibración Ojo-en-Mano: Ecuación $AX = XB$}
+En una configuración montada en el efector final (\textit{eye-in-hand}), la cámara se desplaza solidaria al extremo del robot. Para relacionar las coordenadas de los objetos observados con la base del robot, se debe determinar la transformación rígida desconocida $X = T_{cam}^{gripper}$.
+
+Al mover el robot entre dos posturas distintas $i$ y $j$, se forma el lazo cinemático cerrado:
+\begin{equation}
+A \cdot X = X \cdot B
+\end{equation}
+donde:
+\begin{itemize}
+    \item $A = (T_{gripper_j}^{base})^{-1} \cdot T_{gripper_i}^{base}$ representa el desplazamiento del robot reportado por los encoders.
+    \item $B = T_{target}^{cam_j} \cdot (T_{target}^{cam_i})^{-1}$ representa el desplazamiento visual medido del patrón de calibración.
+\end{itemize}
+
+\subsection{Solución Desacoplada de Tsai-Lenz}
+Separando la rotación $R_X$ de la traslación $t_X$:
+\begin{align}
+R_A \cdot R_X &= R_X \cdot R_B \\
+(R_A - I) \cdot t_X &= R_X \cdot t_B - t_A
+\end{align}
+Representando las rotaciones mediante vectores de eje-ángulo (o cuaterniones unitarios), se obtiene una solución de mínimos cuadrados linealmente estable para $N \ge 3$ movimientos no paralelos.
+
+\section{Seguimiento Dinámico de Cintas (Conveyor Tracking)}
+Para recoger piezas en movimiento sin detener la línea de producción, la posición del efector final en la dirección de traslación de la cinta $x_c(t)$ se sincroniza en tiempo real:
+\begin{equation}
+x_c(t) = x_{cam} + v_{belt} \cdot (t - t_{trigger}) + \frac{1}{2} a_{belt} (t - t_{trigger})^2
+\end{equation}
+donde $v_{belt}$ se computa leyendo las pulsaciones del encoder incremental de cuadratura a través del módulo de conteo rápido del PLC industrial.
+
+\section{Conclusiones}
+La integración de visión artificial calibrada milimétricamente con algoritmos de tracking cinemático permite tasas de captura superiores a 120 piezas por minuto en robots paralelos Delta, con tolerancias espaciales inferiores a $\pm 0.25\,\text{mm}$.
+
+\begin{thebibliography}{9}
+\bibitem{tsai} R. Y. Tsai and R. K. Lenz, \textit{A new technique for fully autonomous and efficient 3D robotics hand/eye calibration}, IEEE Trans. Robotics and Automation, 1989.
+\bibitem{zhang} Z. Zhang, \textit{A flexible new technique for camera calibration}, IEEE Trans. Pattern Analysis and Machine Intelligence, 2000.
+\bibitem{hartley} R. Hartley and A. Zisserman, \textit{Multiple View Geometry in Computer Vision}, Cambridge University Press, 2004.
+\end{thebibliography}
+
+\end{document}

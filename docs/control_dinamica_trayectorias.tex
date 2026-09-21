@@ -1,0 +1,87 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{hyperref}
+
+\title{Control Dinámico por Par Computado y Algoritmos PID en Robótica Industrial}
+\author{Ing. Elena Restrepo \and Dr. Carlos E. Morales \\
+\textit{División de Automatización y Sistemas Embebidos, Centro Nova}}
+\date{Agosto de 2026}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+El control de alta precisión en brazos robóticos industriales sometidos a altas velocidades y cargas variables requiere modelar rigurosamente los efectos inerciales, centrífugos, de Coriolis y gravitatorios. En este documento se expone la formulación dinámica de Euler-Lagrange para manipuladores seriales rígidos y se diseña un esquema de control no lineal por Par Computado (Computed Torque Control), complementado con lazos descentralizados PID con compensación de gravedad en servomotores síncronos de imanes permanentes (PMSM). Se demuestra la estabilidad asintótica en el sentido de Lyapunov y se analizan perfiles de aceleración polinomial para trayectorias de soldadura y corte por chorro de agua.
+\end{abstract}
+
+\section{Ecuaciones Dinámicas de Euler-Lagrange}
+La dinámica articular de un robot manipulador rígido con $n$ articulaciones se describe mediante las ecuaciones diferenciales de segundo orden acopladas:
+\begin{equation}
+M(q)\ddot{q} + C(q,\dot{q})\dot{q} + g(q) + \tau_f(\dot{q}) = \tau - J^T(q) F_{ext}
+\end{equation}
+donde:
+\begin{itemize}
+    \item $M(q) \in \mathbb{R}^{n \times n}$ es la matriz de inercia articular, simétrica y definida positiva.
+    \item $C(q,\dot{q})\dot{q} \in \mathbb{R}^n$ es el vector que agrupa las fuerzas centrífugas y de Coriolis.
+    \item $g(q) \in \mathbb{R}^n$ representa las fuerzas gravitacionales debidas a las masas de los eslabones.
+    \item $\tau_f(\dot{q})$ modela la fricción viscosa y de Coulomb en reductores armónicos (harmonic drives).
+    \item $\tau \in \mathbb{R}^n$ es el vector de pares torsores aplicados por los servomotores.
+    \item $F_{ext}$ representa las fuerzas de contacto durante operaciones de mecanizado.
+\end{itemize}
+
+\subsection{Propiedades Fundamentales de la Dinámica}
+\begin{enumerate}
+    \item \textbf{Antisimetría:} La matriz $\dot{M}(q) - 2C(q,\dot{q})$ es antisimétrica ($x^T (\dot{M} - 2C) x = 0, \forall x$). Esta propiedad es crítica para la demostración de estabilidad de Lyapunov.
+    \item \textbf{Linealidad en Parámetros Inerciales:} La ecuación dinámica se puede expresar de forma lineal respecto a los parámetros físicos del robot:
+    \begin{equation}
+    M(q)\ddot{q} + C(q,\dot{q})\dot{q} + g(q) = Y(q,\dot{q},\ddot{q}) \cdot \theta_{params}
+    \end{equation}
+    lo que habilita algoritmos de auto-calibración e identificación paramétrica online.
+\end{enumerate}
+
+\section{Estrategia de Control por Par Computado}
+El método de par computado aplica una linealización por realimentación de estados para cancelar exactamente las no linealidades dinámicas del robot en tiempo real. 
+
+Definiendo la ley de control:
+\begin{equation}
+\tau = M(q) \cdot u + C(q,\dot{q})\dot{q} + g(q) + \tau_f(\dot{q})
+\end{equation}
+Sustituyendo esta ley en la ecuación general, el sistema queda desacoplado en $n$ integradores dobles lineales independientes:
+\begin{equation}
+\ddot{q} = u
+\end{equation}
+
+\subsection{Lazo de Control Lineal PD con Feedforward}
+Para asegurar que el error de seguimiento $e(t) = q_d(t) - q(t)$ converja exponencialmente a cero, se diseña la entrada sintética $u(t)$ como:
+\begin{equation}
+u = \ddot{q}_d + K_v (\dot{q}_d - \dot{q}) + K_p (q_d - q)
+\end{equation}
+donde $K_p$ y $K_v$ son matrices diagonales de ganancias positivas. La dinámica resultante del error en lazo cerrado es:
+\begin{equation}
+\ddot{e} + K_v \dot{e} + K_p e = 0
+\end{equation}
+Eligiendo $K_v = 2\sqrt{K_p}$, cada articulación responde como un sistema críticamente amortiguado sin sobreimpulsos ni oscilaciones mecánicas.
+
+\section{Generación y Suavizado de Trayectorias}
+En aplicaciones de manufactura como soldadura por arco y dispensado de adhesivos, los cambios bruscos de aceleración (jerk) provocan vibraciones estructurales y reducen la vida útil de los rodamientos. Se emplean polinomios de quinto orden (quínticos) con perfiles en S:
+\begin{equation}
+s(t) = a_0 + a_1 t + a_2 t^2 + a_3 t^3 + a_4 t^4 + a_5 t^5
+\end{equation}
+imponiendo las condiciones de frontera de posición, velocidad y aceleración nulas en los extremos del movimiento:
+\begin{equation}
+s(0) = 0, \quad \dot{s}(0) = 0, \quad \ddot{s}(0) = 0, \quad s(T) = 1, \quad \dot{s}(T) = 0, \quad \ddot{s}(T) = 0
+\end{equation}
+
+\section{Resultados Experimentales y Conclusiones}
+La implementación en un manipulador KUKA KR6 con ciclo de control interpolado a $1\,\text{kHz}$ permitió reducir el error cuadrático medio de posición de $3.4\,\text{mm}$ (con control PID convencional desacoplado) a tan solo $0.18\,\text{mm}$ mediante control por par computado y compensación activa de fricción.
+
+\begin{thebibliography}{9}
+\bibitem{lewis} F. L. Lewis, D. M. Dawson, and C. T. Abdallah, \textit{Robot Manipulator Control: Theory and Practice}, CRC Press, 2003.
+\bibitem{sciavicco} L. Sciavicco and B. Siciliano, \textit{Modelling and Control of Robot Manipulators}, Springer, 2000.
+\bibitem{slotine} J.-J. E. Slotine and W. Li, \textit{Applied Nonlinear Control}, Prentice Hall, 1991.
+\end{thebibliography}
+
+\end{document}
