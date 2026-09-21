@@ -1,12 +1,13 @@
 /**
  * RoboDocs - Industrial Robotics Documentation Platform
  * Main Controller: document loading, client-side LaTeX parsing, dual-sidebar navigation,
- * scroll-spy outline, search, themes, export tools, and PWA capabilities.
+ * scroll-spy outline, search, themes, presentation slideshow mode, diagram zoom, and PWA capabilities.
  */
 
 document.addEventListener('DOMContentLoaded', () => {
     const app = new RoboDocsApp();
     window.RoboDocsApp = app;
+    window.roboDocs = app;
     app.init();
 });
 
@@ -16,11 +17,18 @@ class RoboDocsApp {
         this.currentDoc = null;
         this.parser = new LatexParser();
         this.currentRawTex = '';
-        this.activeView = 'rendered'; // 'rendered' or 'source'
         this.currentTheme = localStorage.getItem('robodocs-theme') || 'dark';
         this.fontSize = 16;
         this.deferredPrompt = null;
         this.scrollObserver = null;
+
+        // Estado del Modo Presentación
+        this.isPresentationMode = false;
+        this.currentSlideIndex = 1;
+        this.totalSlides = 1;
+
+        // Niveles de zoom para diagramas TikZ
+        this.diagramScales = {};
     }
 
     async init() {
@@ -110,8 +118,15 @@ class RoboDocsApp {
                 contentCanvas.innerHTML = parsed.html;
             }
 
-            // Inyectar código fuente con numeración en la vista TeX
-            this.renderSourceView(rawTex);
+            // Calcular total de diapositivas Beamer disponibles
+            const slides = contentCanvas ? contentCanvas.querySelectorAll('.beamer-slide') : [];
+            this.totalSlides = slides.length || 1;
+            this.currentSlideIndex = 1;
+
+            // Si está en modo presentación, posicionar en primera diapositiva
+            if (this.isPresentationMode) {
+                this.goToSlide(1);
+            }
 
             // Renderizar la Tabla de Contenidos (TOC) en la barra lateral derecha
             this.renderRightToc(parsed.toc);
@@ -121,6 +136,9 @@ class RoboDocsApp {
 
             // Disparar renderizado de fórmulas KaTeX / MathJax
             this.typesetMath(contentCanvas);
+
+            // Actualizar dock de presentación
+            this.updatePresentationDockUI();
 
             // Reiniciar scroll del contenedor principal al tope
             const mainViewport = document.getElementById('mainContentArea');
@@ -143,24 +161,6 @@ class RoboDocsApp {
                 `;
             }
         }
-    }
-
-    renderSourceView(rawTex) {
-        const sourceGutter = document.getElementById('sourceCodeGutter');
-        const sourceLabel = document.getElementById('sourceFilenameLabel');
-        if (sourceLabel && this.currentDoc) {
-            sourceLabel.textContent = this.currentDoc.filename;
-        }
-
-        if (!sourceGutter) return;
-
-        const lines = rawTex.split('\n');
-        let htmlLines = '';
-        lines.forEach((line, idx) => {
-            const num = idx + 1;
-            htmlLines += `<div class="code-row"><span class="line-num">${num}</span><span class="line-text">${this.parser.escapeHtml(line)}</span></div>`;
-        });
-        sourceGutter.innerHTML = htmlLines;
     }
 
     /* ==========================================================================
@@ -189,13 +189,28 @@ class RoboDocsApp {
         html += '</ul>';
         tocContainer.innerHTML = html;
 
-        // Añadir evento clic suave
+        // Añadir evento clic que respeta el modo presentación y modo lista
         tocContainer.querySelectorAll('.toc-anchor').forEach(a => {
             a.addEventListener('click', (e) => {
                 e.preventDefault();
                 const targetId = a.getAttribute('data-target');
                 const targetEl = document.getElementById(targetId);
                 if (targetEl) {
+                    if (this.isPresentationMode) {
+                        const slideNum = parseInt(targetEl.getAttribute('data-slide'), 10);
+                        if (!isNaN(slideNum)) {
+                            this.goToSlide(slideNum);
+                            return;
+                        }
+                        const parentSlide = targetEl.closest('.beamer-slide');
+                        if (parentSlide) {
+                            const pNum = parseInt(parentSlide.getAttribute('data-slide'), 10);
+                            if (!isNaN(pNum)) {
+                                this.goToSlide(pNum);
+                                return;
+                            }
+                        }
+                    }
                     targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     history.replaceState(null, '', `#${this.currentDoc.id}`);
                 }
@@ -208,7 +223,7 @@ class RoboDocsApp {
             this.scrollObserver.disconnect();
         }
 
-        const headings = document.querySelectorAll('.latex-section, .latex-subsection, .latex-subsubsection');
+        const headings = document.querySelectorAll('.beamer-slide, .latex-section, .latex-subsection');
         if (!headings.length) return;
 
         const observerOptions = {
@@ -218,6 +233,7 @@ class RoboDocsApp {
         };
 
         this.scrollObserver = new IntersectionObserver((entries) => {
+            if (this.isPresentationMode) return; // En presentación el TOC se sincroniza con goToSlide
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
                     const id = entry.target.id;
@@ -232,7 +248,7 @@ class RoboDocsApp {
     }
 
     /* ==========================================================================
-       4. Paginación Inferior (Anterior / Siguiente)
+       4. Paginación Inferior (Anterior / Siguiente Documento)
        ========================================================================== */
     renderPagination() {
         const container = document.getElementById('docPagination');
@@ -246,7 +262,7 @@ class RoboDocsApp {
 
         if (prevDoc) {
             html += `
-                <a href="#${prevDoc.id}" class="pagination-card prev-card" onclick="event.preventDefault(); window.roboDocs.loadDocument('${prevDoc.id}');">
+                <a href="#${prevDoc.id}" class="pagination-card prev-card" onclick="event.preventDefault(); window.RoboDocsApp.loadDocument('${prevDoc.id}');">
                     <span class="pag-dir">← Documento Anterior</span>
                     <strong class="pag-title">${prevDoc.title}</strong>
                 </a>
@@ -257,7 +273,7 @@ class RoboDocsApp {
 
         if (nextDoc) {
             html += `
-                <a href="#${nextDoc.id}" class="pagination-card next-card" onclick="event.preventDefault(); window.roboDocs.loadDocument('${nextDoc.id}');">
+                <a href="#${nextDoc.id}" class="pagination-card next-card" onclick="event.preventDefault(); window.RoboDocsApp.loadDocument('${nextDoc.id}');">
                     <span class="pag-dir">Siguiente Documento →</span>
                     <strong class="pag-title">${nextDoc.title}</strong>
                 </a>
@@ -376,17 +392,213 @@ class RoboDocsApp {
     }
 
     /* ==========================================================================
-       7. Eventos de UI, Temas, Vistas y Herramientas
+       7. Modo Presentación (Diapositivas Beamer)
+       ========================================================================== */
+    setPresentationMode(enable) {
+        this.isPresentationMode = !!enable;
+        document.body.classList.toggle('is-presentation-mode', this.isPresentationMode);
+
+        const btnCont = document.getElementById('btnViewContinuous');
+        const btnPres = document.getElementById('btnViewPresentation');
+        const dock = document.getElementById('presentationDock');
+
+        if (btnCont) {
+            btnCont.classList.toggle('active', !this.isPresentationMode);
+            btnCont.setAttribute('aria-selected', (!this.isPresentationMode).toString());
+        }
+        if (btnPres) {
+            btnPres.classList.toggle('active', this.isPresentationMode);
+            btnPres.setAttribute('aria-selected', this.isPresentationMode.toString());
+        }
+
+        if (dock) {
+            dock.style.display = this.isPresentationMode ? 'flex' : 'none';
+        }
+
+        const slides = document.querySelectorAll('.beamer-slide');
+        this.totalSlides = slides.length || 1;
+
+        if (this.isPresentationMode) {
+            this.goToSlide(this.currentSlideIndex || 1);
+            this.showToast('Modo Presentación activado. Usa flechas o barra espaciadora para navegar.');
+        } else {
+            // En modo continuo, remover clase active-slide
+            slides.forEach(s => s.classList.remove('active-slide'));
+            // Desplazar suavemente a la diapositiva actual para mantener contexto
+            const currentEl = document.getElementById(`slide-${this.currentSlideIndex}`);
+            if (currentEl) {
+                currentEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+    }
+
+    goToSlide(index) {
+        const slides = document.querySelectorAll('.beamer-slide');
+        if (!slides.length) return;
+
+        this.totalSlides = slides.length;
+        const clamped = Math.max(1, Math.min(index, this.totalSlides));
+        this.currentSlideIndex = clamped;
+
+        slides.forEach((s, idx) => {
+            const isCur = (idx + 1) === clamped;
+            s.classList.toggle('active-slide', isCur);
+        });
+
+        this.updatePresentationDockUI();
+
+        // Reiniciar scroll del viewport central al tope
+        const mainViewport = document.getElementById('mainContentArea');
+        if (mainViewport) mainViewport.scrollTop = 0;
+
+        // Resaltar en la barra lateral derecha (TOC)
+        const targetId = `slide-${clamped}`;
+        document.querySelectorAll('.toc-anchor').forEach(a => {
+            a.classList.toggle('is-current', a.getAttribute('data-target') === targetId);
+        });
+    }
+
+    nextSlide() {
+        if (this.currentSlideIndex < this.totalSlides) {
+            this.goToSlide(this.currentSlideIndex + 1);
+        }
+    }
+
+    prevSlide() {
+        if (this.currentSlideIndex > 1) {
+            this.goToSlide(this.currentSlideIndex - 1);
+        }
+    }
+
+    firstSlide() {
+        this.goToSlide(1);
+    }
+
+    lastSlide() {
+        this.goToSlide(this.totalSlides);
+    }
+
+    updatePresentationDockUI() {
+        const curEl = document.getElementById('presCurrentNum');
+        const totEl = document.getElementById('presTotalNum');
+        const barEl = document.getElementById('presentationProgressBar');
+
+        if (curEl) curEl.textContent = this.currentSlideIndex;
+        if (totEl) totEl.textContent = this.totalSlides;
+        if (barEl) {
+            const pct = this.totalSlides > 0 ? (this.currentSlideIndex / this.totalSlides) * 100 : 0;
+            barEl.style.width = `${Math.max(1, Math.min(pct, 100))}%`;
+        }
+    }
+
+    async toggleFullscreen() {
+        try {
+            if (!document.fullscreenElement) {
+                await document.documentElement.requestFullscreen();
+            } else {
+                await document.exitFullscreen();
+            }
+        } catch (e) {
+            console.warn('Error al cambiar pantalla completa:', e);
+        }
+    }
+
+    /* ==========================================================================
+       8. Zoom Interactivo en Diagramas TikZ
+       ========================================================================== */
+    zoomDiagram(wrapperId, delta) {
+        if (!this.diagramScales) this.diagramScales = {};
+        const currentScale = this.diagramScales[wrapperId] || 1.0;
+        const newScale = Math.min(Math.max(Math.round((currentScale + delta) * 10) / 10, 0.6), 3.0);
+        this.diagramScales[wrapperId] = newScale;
+
+        const contentEl = document.getElementById(`zoom-content-${wrapperId}`);
+        const badgeEl = document.getElementById(`zoom-val-${wrapperId}`);
+
+        if (contentEl) {
+            contentEl.style.transform = `scale(${newScale})`;
+            contentEl.style.transformOrigin = 'center center';
+        }
+        if (badgeEl) {
+            badgeEl.textContent = `${Math.round(newScale * 100)}%`;
+        }
+    }
+
+    resetDiagramZoom(wrapperId) {
+        if (!this.diagramScales) this.diagramScales = {};
+        this.diagramScales[wrapperId] = 1.0;
+
+        const contentEl = document.getElementById(`zoom-content-${wrapperId}`);
+        const badgeEl = document.getElementById(`zoom-val-${wrapperId}`);
+
+        if (contentEl) {
+            contentEl.style.transform = 'scale(1)';
+        }
+        if (badgeEl) {
+            badgeEl.textContent = '100%';
+        }
+    }
+
+    /* ==========================================================================
+       9. Eventos de UI, Atajos de Teclado y Herramientas
        ========================================================================== */
     bindEvents() {
-        // Conmutador de Vistas: Renderizado vs Código TeX
-        const btnViewRendered = document.getElementById('btnViewRendered');
-        const btnViewSource = document.getElementById('btnViewSource');
+        // Conmutador de Vistas: Modo Lista vs Modo Presentación
+        const btnViewContinuous = document.getElementById('btnViewContinuous');
+        const btnViewPresentation = document.getElementById('btnViewPresentation');
 
-        if (btnViewRendered && btnViewSource) {
-            btnViewRendered.addEventListener('click', () => this.switchView('rendered'));
-            btnViewSource.addEventListener('click', () => this.switchView('source'));
+        if (btnViewContinuous) {
+            btnViewContinuous.addEventListener('click', () => this.setPresentationMode(false));
         }
+        if (btnViewPresentation) {
+            btnViewPresentation.addEventListener('click', () => this.setPresentationMode(true));
+        }
+
+        // Controles del Dock de Presentación
+        const btnPresFirst = document.getElementById('btnPresFirst');
+        const btnPresPrev = document.getElementById('btnPresPrev');
+        const btnPresNext = document.getElementById('btnPresNext');
+        const btnPresLast = document.getElementById('btnPresLast');
+        const btnPresFullscreen = document.getElementById('btnPresFullscreen');
+        const btnPresExit = document.getElementById('btnPresExit');
+
+        if (btnPresFirst) btnPresFirst.addEventListener('click', () => this.firstSlide());
+        if (btnPresPrev) btnPresPrev.addEventListener('click', () => this.prevSlide());
+        if (btnPresNext) btnPresNext.addEventListener('click', () => this.nextSlide());
+        if (btnPresLast) btnPresLast.addEventListener('click', () => this.lastSlide());
+        if (btnPresFullscreen) btnPresFullscreen.addEventListener('click', () => this.toggleFullscreen());
+        if (btnPresExit) btnPresExit.addEventListener('click', () => this.setPresentationMode(false));
+
+        // Atajos de Teclado Globales
+        window.addEventListener('keydown', (e) => {
+            if (['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
+
+            if (this.isPresentationMode) {
+                if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ' || e.key.toLowerCase() === 'd') {
+                    e.preventDefault();
+                    this.nextSlide();
+                } else if (e.key === 'ArrowLeft' || e.key === 'PageUp' || e.key.toLowerCase() === 'a') {
+                    e.preventDefault();
+                    this.prevSlide();
+                } else if (e.key === 'Home') {
+                    e.preventDefault();
+                    this.firstSlide();
+                } else if (e.key === 'End') {
+                    e.preventDefault();
+                    this.lastSlide();
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    if (document.fullscreenElement) {
+                        document.exitFullscreen();
+                    } else {
+                        this.setPresentationMode(false);
+                    }
+                } else if (e.key.toLowerCase() === 'f') {
+                    e.preventDefault();
+                    this.toggleFullscreen();
+                }
+            }
+        });
 
         // Conmutador de Tema (Dark Industrial vs Light Paper)
         const themeBtn = document.getElementById('btnToggleTheme');
@@ -402,18 +614,6 @@ class RoboDocsApp {
         const btnZoomOut = document.getElementById('btnZoomOut');
         if (btnZoomIn) btnZoomIn.addEventListener('click', () => this.adjustFontSize(1));
         if (btnZoomOut) btnZoomOut.addEventListener('click', () => this.adjustFontSize(-1));
-
-        // Descarga de archivo .tex
-        const btnDownload = document.getElementById('btnDownloadCurrentTex');
-        if (btnDownload) {
-            btnDownload.addEventListener('click', () => this.downloadTex());
-        }
-
-        // Copiar código TeX
-        const btnCopySource = document.getElementById('btnCopySourceCode');
-        if (btnCopySource) {
-            btnCopySource.addEventListener('click', () => this.copyTexSource());
-        }
 
         // Imprimir / Exportar a PDF
         const btnPrint = document.getElementById('btnPrintDocument');
@@ -464,26 +664,6 @@ class RoboDocsApp {
         if (backdrop) backdrop.classList.remove('is-active');
     }
 
-    switchView(view) {
-        this.activeView = view;
-        const renderedView = document.getElementById('renderedPaperContent');
-        const sourceView = document.getElementById('sourceCodeContainer');
-        const btnRendered = document.getElementById('btnViewRendered');
-        const btnSource = document.getElementById('btnViewSource');
-
-        if (view === 'rendered') {
-            if (renderedView) renderedView.style.display = 'block';
-            if (sourceView) sourceView.style.display = 'none';
-            if (btnRendered) btnRendered.classList.add('active');
-            if (btnSource) btnSource.classList.remove('active');
-        } else {
-            if (renderedView) renderedView.style.display = 'none';
-            if (sourceView) sourceView.style.display = 'block';
-            if (btnRendered) btnRendered.classList.remove('active');
-            if (btnSource) btnSource.classList.add('active');
-        }
-    }
-
     applyTheme(theme) {
         this.currentTheme = theme;
         localStorage.setItem('robodocs-theme', theme);
@@ -513,33 +693,13 @@ class RoboDocsApp {
         }
     }
 
-    downloadTex() {
-        if (!this.currentRawTex || !this.currentDoc) return;
-        const blob = new Blob([this.currentRawTex], { type: 'text/x-tex;charset=utf-8;' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = this.currentDoc.filename;
-        a.click();
-        URL.revokeObjectURL(a.href);
-        this.showToast(`Descargando ${this.currentDoc.filename}`);
-    }
-
-    copyTexSource() {
-        if (!this.currentRawTex) return;
-        navigator.clipboard.writeText(this.currentRawTex).then(() => {
-            this.showToast('¡Código LaTeX copiado al portapapeles!');
-        }).catch(() => {
-            this.showToast('Error al copiar el código.');
-        });
-    }
-
     copySnippet(btn) {
         const card = btn.closest('.code-block-card');
         const viewport = card ? card.querySelector('.code-viewport') : null;
         const rawCode = viewport ? viewport.getAttribute('data-raw') : '';
         if (rawCode) {
             navigator.clipboard.writeText(rawCode).then(() => {
-                this.showToast('Fragmento de código copiado.');
+                this.showToast('Fragmento copiado al portapapeles.');
                 const span = btn.querySelector('span');
                 if (span) {
                     const prevText = span.textContent;
@@ -553,8 +713,8 @@ class RoboDocsApp {
     }
 
     /* ==========================================================================
-       8. PWA & Estado de Conexión
-       ========================================================================= */
+       10. PWA & Estado de Conexión
+       ========================================================================== */
     initPwa() {
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
@@ -599,6 +759,3 @@ class RoboDocsApp {
         setTimeout(() => toast.classList.remove('is-visible'), 3500);
     }
 }
-
-// Exponer instancia global para handlers de eventos
-window.roboDocs = new RoboDocsApp();

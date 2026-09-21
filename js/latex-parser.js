@@ -49,6 +49,10 @@ class LatexParser {
         // Ignorar comandos de input de plantillas locales
         body = body.replace(/\\input\{[^}]+\}/g, '');
 
+        // Convertir entornos \begin{center} y \end{center}
+        body = body.replace(/\\begin\{center\}/g, '<div class="latex-center">');
+        body = body.replace(/\\end\{center\}/g, '</div>');
+
         // 4. Pre-procesar entornos de código (tcolorbox / minted / verbatim) para protegerlos de reemplazos
         const codeBlocks = [];
         body = this.protectCodeBlocks(body, codeBlocks);
@@ -546,8 +550,9 @@ class LatexParser {
     protectTikzBlocks(tex, storage) {
         const regex = /\\begin\{tikzpicture\}(?:\[[^\]]*\])?([\s\S]*?)\\end\{tikzpicture\}/g;
         return tex.replace(regex, (match, tikzContent) => {
+            const diagramId = storage.length + 1;
             const placeholder = `___TIKZ_BLOCK_${storage.length}___`;
-            const svgHtml = this.renderTikZToSVG(tikzContent.trim());
+            const svgHtml = this.renderTikZToSVG(tikzContent.trim(), diagramId);
             storage.push({
                 placeholder,
                 html: svgHtml
@@ -564,179 +569,263 @@ class LatexParser {
     }
 
     /**
-     * Motor de interpretación 2D TikZ a Gráficos Vectoriales SVG
+     * Motor Robusto de interpretación 2D TikZ a Gráficos Vectoriales SVG con Zoom
      */
-    renderTikZToSVG(tikzCode) {
-        const width = 420;
-        const height = 300;
-        const originX = 60;
-        const originY = 240;
-        const scale = 45; // 1 unidad = 45px
+    renderTikZToSVG(tikzCode, diagramId = 1) {
+        let code = tikzCode.replace(/%.*$/gm, "").replace(/\r?\n/g, " ");
 
-        const toSvgX = (x) => originX + x * scale;
-        const toSvgY = (y) => originY - y * scale;
+        const width = 460;
+        const height = 340;
+        const originX = 70;
+        const originY = 270;
+        const scale = 48;
 
-        let svgElements = '';
-        let recognized = false;
+        const toX = (x) => Math.round(originX + x * scale);
+        const toY = (y) => Math.round(originY - y * scale);
 
-        // Marcador de flecha para vectores y ejes
+        const coordinates = {};
+        const resolveCoord = (t) => {
+            if (!t) return null;
+            t = t.trim();
+            const key = t.replace(/[()]/g, "").trim();
+            if (coordinates[key]) return coordinates[key];
+            const m = t.match(/\(([\d\.\-]+)\s*,\s*([\d\.\-]+)\)/);
+            if (m) return { x: parseFloat(m[1]), y: parseFloat(m[2]) };
+            return null;
+        };
+
+        const cleanMathText = (str) => {
+            if (!str) return "";
+            return str
+                .replace(/\$([^\$]+)\$/g, "$1")
+                .replace(/\\mathbf\{([^}]+)\}/g, "$1")
+                .replace(/\\textbf\{([^}]+)\}/g, "$1")
+                .replace(/\\alpha/g, "α")
+                .replace(/\\theta/g, "θ")
+                .replace(/\\rho/g, "ρ")
+                .replace(/\\cos/g, "cos ")
+                .replace(/\\sin/g, "sin ")
+                .replace(/\\circ/g, "°")
+                .trim();
+        };
+
+        // Extraer scope si existe (diagrama 7 robot local)
+        const scopeMatch = code.match(/\\begin\{scope\}\[([^\]]+)\]([\s\S]*?)\\end\{scope\}/);
+        let scopeShift = null;
+        let scopeRotate = 0;
+        let scopeBody = "";
+        if (scopeMatch) {
+            const opts = scopeMatch[1];
+            scopeBody = scopeMatch[2];
+            const sm = opts.match(/shift=\{?\(([^)]+)\)\}?/);
+            if (sm) scopeShift = sm[1];
+            const rm = opts.match(/rotate=([\d\.\-]+)/);
+            if (rm) scopeRotate = parseFloat(rm[1]);
+            code = code.replace(scopeMatch[0], " ");
+        }
+
+        const statements = code.split(";").map(s => s.trim()).filter(s => s.length > 0);
+        let svgItems = "";
+
+        const parseStatement = (stmt) => {
+            // 1. \coordinate (Name) at (x,y)
+            const coordM = stmt.match(/\\coordinate\s*\(([A-Za-z0-9_]+)\)\s*at\s*(\([^)]+\))/);
+            if (coordM) {
+                const pt = resolveCoord(coordM[2]);
+                if (pt) coordinates[coordM[1]] = pt;
+                return;
+            }
+
+            // 2. \filldraw or \fill: \filldraw[...] (Point) circle (Radius)
+            const filldrawM = stmt.match(/\\(filldraw|fill)\s*(?:\[([\s\S]*?)\]\s*)?(\([^\)]+\)|[A-Za-z0-9_]+)\s*circle\s*\(([^)]+)\)/);
+            if (filldrawM) {
+                const opts = filldrawM[2] || "";
+                const pt = resolveCoord(filldrawM[3]);
+                if (pt) {
+                    let fill = "#FFB93E";
+                    if (opts.includes("BrandBlue")) fill = "#2563eb";
+                    if (opts.includes("BrandGreen")) fill = "#10b981";
+                    svgItems += `  <circle cx="${toX(pt.x)}" cy="${toY(pt.y)}" r="6" fill="${fill}" stroke="#ffffff" stroke-width="2" />\n`;
+                }
+                return;
+            }
+
+            // 3. \draw arc: \draw[->, ...] (x,y) arc[start angle=A, end angle=B, radius=R]
+            const arcM = stmt.match(/\\draw\s*(?:\[([\s\S]*?)\]\s*)?(\([^)]+\))\s*arc\[start angle=([\d\.\-]+),\s*end angle=([\d\.\-]+),\s*radius=([\d\.\-]+)\]/);
+            if (arcM) {
+                const opts = arcM[1] || "";
+                const pt = resolveCoord(arcM[2]);
+                const a1 = parseFloat(arcM[3]) * Math.PI / 180;
+                const a2 = parseFloat(arcM[4]) * Math.PI / 180;
+                const r = parseFloat(arcM[5]);
+
+                if (pt) {
+                    const cx = pt.x - r * Math.cos(a1);
+                    const cy = pt.y - r * Math.sin(a1);
+                    const x2 = cx + r * Math.cos(a2);
+                    const y2 = cy + r * Math.sin(a2);
+
+                    const p1x = toX(pt.x);
+                    const p1y = toY(pt.y);
+                    const p2x = toX(x2);
+                    const y2Px = toY(y2);
+                    const rPx = r * scale;
+
+                    let stroke = "#F59E0B";
+                    if (opts.includes("BrandGreen")) stroke = "#10B981";
+
+                    svgItems += `  <path d="M ${p1x} ${p1y} A ${rPx} ${rPx} 0 0 1 ${p2x} ${y2Px}" fill="none" stroke="${stroke}" stroke-width="2.5" marker-end="url(#arrowhead-arc-${diagramId})" />\n`;
+                }
+                return;
+            }
+
+            // 4. \draw line: \draw[...] (p1) -- (p2) (optional node...)
+            const lineM = stmt.match(/\\draw\s*(?:\[([\s\S]*?)\]\s*)?(\([^\)]+\)|[A-Za-z0-9_]+)\s*--\s*(\([^\)]+\)|[A-Za-z0-9_]+)([\s\S]*)?/);
+            if (lineM) {
+                const opts = lineM[1] || "";
+                const p1 = resolveCoord(lineM[2]);
+                const p2 = resolveCoord(lineM[3]);
+                const rest = lineM[4] || "";
+
+                if (p1 && p2) {
+                    const isDashed = opts.includes("dashed");
+                    const isArrow = opts.includes("->") || opts.includes("Latex");
+                    let stroke = "var(--text-muted, #94a3b8)";
+                    let strokeWidth = 2;
+                    let marker = isArrow ? `url(#arrowhead-axis-${diagramId})` : "";
+
+                    if (opts.includes("BrandBlue")) {
+                        stroke = "#2563eb";
+                        strokeWidth = 3;
+                        marker = `url(#arrowhead-blue-${diagramId})`;
+                    } else if (opts.includes("BrandGreen")) {
+                        stroke = "#10B981";
+                        strokeWidth = 3;
+                        marker = `url(#arrowhead-green-${diagramId})`;
+                    }
+
+                    svgItems += `  <line x1="${toX(p1.x)}" y1="${toY(p1.y)}" x2="${toX(p2.x)}" y2="${toY(p2.y)}" stroke="${stroke}" stroke-width="${strokeWidth}" ${isDashed ? 'stroke-dasharray="5 4"' : ""} ${marker ? `marker-end="${marker}"` : ""} />\n`;
+
+                    // Node inline at end of line: node[right] {$X$}
+                    const nodeInlineM = rest.match(/node(?:\[([^\]]*)\])?\s*\{([\s\S]*?)\}/);
+                    if (nodeInlineM) {
+                        const posOpt = nodeInlineM[1] || "right";
+                        const label = cleanMathText(nodeInlineM[2]);
+                        let dx = 10, dy = 5;
+                        let anchor = "start";
+                        if (posOpt.includes("above")) { dx = 0; dy = -10; anchor = "middle"; }
+                        else if (posOpt.includes("below")) { dx = 0; dy = 18; anchor = "middle"; }
+                        else if (posOpt.includes("left")) { dx = -14; dy = 5; anchor = "end"; }
+
+                        svgItems += `  <text x="${toX(p2.x) + dx}" y="${toY(p2.y) + dy}" fill="var(--text-primary, #0f172a)" font-family="'Outfit', sans-serif" font-size="14" font-weight="700" text-anchor="${anchor}">${label}</text>\n`;
+                    }
+                }
+                return;
+            }
+
+            // 5. Standalone \node[...] at (x,y) {label}
+            const nodeM = stmt.match(/\\node\s*(?:\[([\s\S]*?)\]\s*)?at\s*(\([^)]+\)|[A-Za-z0-9_]+)\s*\{([\s\S]*?)\}/);
+            if (nodeM) {
+                const posOpt = nodeM[1] || "";
+                const pt = resolveCoord(nodeM[2]);
+                const label = cleanMathText(nodeM[3]);
+
+                if (pt) {
+                    let dx = 8, dy = -6;
+                    let anchor = "start";
+                    if (posOpt.includes("below")) { dx = 0; dy = 18; anchor = "middle"; }
+                    else if (posOpt.includes("above right")) { dx = 8; dy = -10; anchor = "start"; }
+                    else if (posOpt.includes("above")) { dx = 0; dy = -10; anchor = "middle"; }
+                    else if (posOpt.includes("left")) { dx = -14; dy = 4; anchor = "end"; }
+                    else if (posOpt.includes("right")) { dx = 10; dy = 4; anchor = "start"; }
+
+                    svgItems += `  <text x="${toX(pt.x) + dx}" y="${toY(pt.y) + dy}" fill="var(--text-primary, #0f172a)" font-family="'Outfit', sans-serif" font-size="13" font-weight="600" text-anchor="${anchor}">${label}</text>\n`;
+                }
+                return;
+            }
+        };
+
+        statements.forEach(s => parseStatement(s));
+
+        // Scope para diagrama 7
+        if (scopeBody) {
+            const shiftPt = resolveCoord(scopeShift) || { x: 0, y: 0 };
+            const sX = toX(shiftPt.x);
+            const sY = toY(shiftPt.y);
+            const scopeStmts = scopeBody.split(";").map(s => s.trim()).filter(s => s.length > 0);
+
+            let scopeSvg = "";
+            scopeStmts.forEach(stmt => {
+                const rm = stmt.match(/rectangle\s*(\([^)]+\))/);
+                if (rm) {
+                    scopeSvg += `    <rect x="${-0.4 * scale}" y="${-0.3 * scale}" width="${0.8 * scale}" height="${0.6 * scale}" fill="rgba(37,99,235,0.25)" stroke="#2563eb" stroke-width="2" rx="4" />\n`;
+                }
+                const lm = stmt.match(/\\draw\s*(?:\[([\s\S]*?)\]\s*)?\(([\d\.\-]+),([\d\.\-]+)\)\s*--\s*\(([\d\.\-]+),([\d\.\-]+)\)([\s\S]*)?/);
+                if (lm) {
+                    const x1 = parseFloat(lm[2]) * scale;
+                    const y1 = -parseFloat(lm[3]) * scale;
+                    const x2 = parseFloat(lm[4]) * scale;
+                    const y2 = -parseFloat(lm[5]) * scale;
+                    const rest = lm[6] || "";
+                    scopeSvg += `    <line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#10B981" stroke-width="2.5" marker-end="url(#arrowhead-green-${diagramId})" />\n`;
+                    const nm = rest.match(/node(?:\[([^\]]*)\])?\s*\{([\s\S]*?)\}/);
+                    if (nm) {
+                        const label = cleanMathText(nm[2]);
+                        scopeSvg += `    <text x="${x2 + 8}" y="${y2}" fill="#10B981" font-family="'Outfit', sans-serif" font-size="13" font-weight="700">${label}</text>\n`;
+                    }
+                }
+            });
+
+            const svgRot = -scopeRotate;
+            svgItems += `  <g transform="translate(${sX}, ${sY}) rotate(${svgRot})">\n${scopeSvg}  </g>\n`;
+        }
+
         const defs = `
             <defs>
-                <marker id="arrowhead-main" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
-                    <polygon points="0 1, 8 4, 0 7" fill="#14C486" />
+                <marker id="arrowhead-arc-${diagramId}" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+                    <polygon points="0 1, 8 4, 0 7" fill="#F59E0B" />
                 </marker>
-                <marker id="arrowhead-blue" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
-                    <polygon points="0 1, 8 4, 0 7" fill="#1E3C78" />
+                <marker id="arrowhead-green-${diagramId}" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+                    <polygon points="0 1, 8 4, 0 7" fill="#10B981" />
                 </marker>
-                <marker id="arrowhead-axis" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
+                <marker id="arrowhead-blue-${diagramId}" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+                    <polygon points="0 1, 8 4, 0 7" fill="#2563eb" />
+                </marker>
+                <marker id="arrowhead-axis-${diagramId}" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
                     <polygon points="0 1, 7 3.5, 0 6" fill="#94A3B8" />
                 </marker>
             </defs>
         `;
 
-        // 1. Parsear coordenadas nombradas: \coordinate (P) at (4,3);
-        const coordinates = {};
-        const coordRegex = /\\coordinate\s*\(([A-Za-z0-9]+)\)\s*at\s*\(([\d\.\-]+),([\d\.\-]+)\);/g;
-        let cMatch;
-        while ((cMatch = coordRegex.exec(tikzCode)) !== null) {
-            coordinates[cMatch[1]] = { x: parseFloat(cMatch[2]), y: parseFloat(cMatch[3]) };
-        }
-
-        const resolveCoord = (token) => {
-            token = token.trim();
-            if (coordinates[token]) return coordinates[token];
-            const m = token.match(/\(([\d\.\-]+),([\d\.\-]+)\)/);
-            if (m) return { x: parseFloat(m[1]), y: parseFloat(m[2]) };
-            return null;
-        };
-
-        // 2. Dibujar líneas y ejes: \draw[...] (x1,y1) -- (x2,y2);
-        const lineRegex = /\\draw\s*(?:\[([^\]]*)\])?\s*(\([^)]+\)|[A-Za-z0-9]+)\s*--\s*(\([^)]+\)|[A-Za-z0-9]+)(?:\s*node[^;]*)?;/g;
-        let lMatch;
-        while ((lMatch = lineRegex.exec(tikzCode)) !== null) {
-            const options = lMatch[1] || '';
-            const p1 = resolveCoord(lMatch[2]);
-            const p2 = resolveCoord(lMatch[3]);
-
-            if (p1 && p2) {
-                recognized = true;
-                const isDashed = options.includes('dashed');
-                const isArrow = options.includes('->') || options.includes('Latex');
-                let stroke = '#94A3B8';
-                let strokeWidth = 2;
-                let marker = isArrow ? 'url(#arrowhead-axis)' : '';
-
-                if (options.includes('BrandBlue')) {
-                    stroke = '#3B82F6';
-                    strokeWidth = 3;
-                    marker = 'url(#arrowhead-blue)';
-                } else if (options.includes('BrandGreen')) {
-                    stroke = '#10B981';
-                    strokeWidth = 3;
-                    marker = 'url(#arrowhead-main)';
-                }
-
-                svgElements += `
-                    <line x1="${toSvgX(p1.x)}" y1="${toSvgY(p1.y)}" x2="${toSvgX(p2.x)}" y2="${toSvgY(p2.y)}"
-                          stroke="${stroke}" stroke-width="${strokeWidth}"
-                          ${isDashed ? 'stroke-dasharray="5 4"' : ''}
-                          ${marker ? `marker-end="${marker}"` : ''} />
-                `;
-            }
-        }
-
-        // 3. Puntos y círculos: \filldraw[...] (P) circle (2.5pt);
-        const circleRegex = /\\filldraw\s*(?:\[([^\]]*)\])?\s*(\([^)]+\)|[A-Za-z0-9]+)\s*circle\s*\(([^)]+)\);/g;
-        let cirMatch;
-        while ((cirMatch = circleRegex.exec(tikzCode)) !== null) {
-            const options = cirMatch[1] || '';
-            const pt = resolveCoord(cirMatch[2]);
-            if (pt) {
-                recognized = true;
-                let fill = '#FFB93E';
-                if (options.includes('BrandBlue')) fill = '#3B82F6';
-                if (options.includes('BrandGreen')) fill = '#10B981';
-
-                svgElements += `
-                    <circle cx="${toSvgX(pt.x)}" cy="${toSvgY(pt.y)}" r="5" fill="${fill}" stroke="#ffffff" stroke-width="1.5" />
-                `;
-            }
-        }
-
-        // 4. Arcos angulares: \draw[...] (x,y) arc[start angle=A, end angle=B, radius=R];
-        const arcRegex = /\\draw\s*(?:\[([^\]]*)\])?\s*\(([\d\.\-]+),([\d\.\-]+)\)\s*arc\[start angle=([\d\.\-]+),\s*end angle=([\d\.\-]+),\s*radius=([\d\.\-]+)\];/g;
-        let arcMatch;
-        while ((arcMatch = arcRegex.exec(tikzCode)) !== null) {
-            recognized = true;
-            const startX = parseFloat(arcMatch[2]);
-            const startY = parseFloat(arcMatch[3]);
-            const startAngle = (parseFloat(arcMatch[4]) * Math.PI) / 180;
-            const endAngle = (parseFloat(arcMatch[5]) * Math.PI) / 180;
-            const r = parseFloat(arcMatch[6]);
-
-            // Centro implícito del arco
-            const cx = startX - r * Math.cos(startAngle);
-            const cy = startY - r * Math.sin(startAngle);
-
-            const x2 = cx + r * Math.cos(endAngle);
-            const y2 = cy + r * Math.sin(endAngle);
-
-            const svgP1x = toSvgX(startX);
-            const svgP1y = toSvgY(startY);
-            const svgP2x = toSvgX(x2);
-            const svgP2y = toSvgY(y2);
-            const svgR = r * scale;
-
-            svgElements += `
-                <path d="M ${svgP1x} ${svgP1y} A ${svgR} ${svgR} 0 0 1 ${svgP2x} ${svgP2y}"
-                      fill="none" stroke="#F59E0B" stroke-width="2.5" marker-end="url(#arrowhead-main)" />
-            `;
-        }
-
-        // 5. Nodos de texto y etiquetas: \node[...] at (x,y) {Texto};
-        const nodeRegex = /\\node\s*(?:\[([^\]]*)\])?\s*at\s*\(([\d\.\-]+),([\d\.\-]+)\)\s*\{([\s\S]*?)\};/g;
-        let nodeMatch;
-        while ((nodeMatch = nodeRegex.exec(tikzCode)) !== null) {
-            recognized = true;
-            const nx = parseFloat(nodeMatch[2]);
-            const ny = parseFloat(nodeMatch[3]);
-            let label = nodeMatch[4].trim();
-
-            // Limpiar comandos matemáticos para visualización SVG limpia
-            label = label
-                .replace(/\$([^\$]+)\$/g, '$1')
-                .replace(/\\mathbf\{([^}]+)\}/g, '$1')
-                .replace(/\\alpha/g, 'α')
-                .replace(/\\theta/g, 'θ')
-                .replace(/\\rho/g, 'ρ')
-                .replace(/\\cos/g, 'cos')
-                .replace(/\\sin/g, 'sin');
-
-            svgElements += `
-                <text x="${toSvgX(nx) + 8}" y="${toSvgY(ny) - 6}" fill="#E2E8F0" font-family="'Outfit', sans-serif" font-size="13" font-weight="600">${label}</text>
-            `;
-        }
-
+        const wrapperId = `tikz-diagram-${diagramId}`;
         return `
-            <div class="tikz-diagram-wrapper">
+            <div class="tikz-diagram-wrapper" id="${wrapperId}">
                 <div class="tikz-svg-card">
                     <div class="tikz-card-header">
                         <span class="tikz-badge"><i class="fa fa-chart-line"></i> Esquema Geométrico Vectorial</span>
+                        <div class="tikz-zoom-controls">
+                            <button type="button" class="btn-tikz-zoom" onclick="window.RoboDocsApp && window.RoboDocsApp.zoomDiagram('${wrapperId}', -0.2)" title="Reducir zoom (−)">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/><line x1="8" x2="14" y1="11" y2="11"/></svg>
+                            </button>
+                            <span class="tikz-zoom-level" id="zoom-val-${wrapperId}">100%</span>
+                            <button type="button" class="btn-tikz-zoom" onclick="window.RoboDocsApp && window.RoboDocsApp.zoomDiagram('${wrapperId}', 0.2)" title="Aumentar zoom (+)">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/><line x1="11" x2="11" y1="8" y2="14"/><line x1="8" x2="14" y1="11" y2="11"/></svg>
+                            </button>
+                            <button type="button" class="btn-tikz-zoom reset" onclick="window.RoboDocsApp && window.RoboDocsApp.resetDiagramZoom('${wrapperId}')" title="Restablecer tamaño">↺</button>
+                        </div>
                     </div>
                     <div class="tikz-svg-viewport">
-                        <svg viewBox="0 0 ${width} ${height}" class="tikz-svg-canvas" xmlns="http://www.w3.org/2000/svg">
-                            ${defs}
-                            <!-- Cuadrícula de fondo -->
-                            <line x1="${originX}" y1="20" x2="${originX}" y2="${height - 20}" stroke="rgba(255,255,255,0.06)" stroke-width="1" />
-                            <line x1="20" y1="${originY}" x2="${width - 20}" y2="${originY}" stroke="rgba(255,255,255,0.06)" stroke-width="1" />
-                            ${svgElements}
-                        </svg>
+                        <div class="tikz-zoomable-content" id="zoom-content-${wrapperId}">
+                            <svg viewBox="0 0 ${width} ${height}" class="tikz-svg-canvas" xmlns="http://www.w3.org/2000/svg">
+                                ${defs}
+                                <!-- Cuadrícula de fondo -->
+                                <line x1="${originX}" y1="20" x2="${originX}" y2="${height - 20}" stroke="rgba(148,163,184,0.18)" stroke-width="1" />
+                                <line x1="20" y1="${originY}" x2="${width - 20}" y2="${originY}" stroke="rgba(148,163,184,0.18)" stroke-width="1" />
+                                ${svgItems}
+                            </svg>
+                        </div>
                     </div>
                 </div>
-                <details class="tikz-source-collapse">
-                    <summary><i class="fa fa-code"></i> Ver definición original en TikZ</summary>
-                    <pre class="tikz-raw-code"><code>\\begin{tikzpicture}\n${this.escapeHtml(tikzCode)}\n\\end{tikzpicture}</code></pre>
-                </details>
             </div>
         `;
     }
@@ -1042,5 +1131,10 @@ class LatexParser {
     }
 }
 
-// Exportar globalmente
-window.LatexParser = LatexParser;
+// Exportar globalmente en navegador y entornos Node.js
+if (typeof window !== 'undefined') {
+    window.LatexParser = LatexParser;
+}
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = LatexParser;
+}
