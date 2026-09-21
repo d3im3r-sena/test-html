@@ -1,0 +1,50 @@
+{
+  "name": "Centro de Ciencia Nova",
+  "short_name": "Nova Ciencia",
+  "description": "Explora el universo, la robótica, las energías limpias y la biotecnología en el Centro de Ciencia Nova con exposiciones interactivas y planetario 8K.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#070b14",
+  "theme_color": "#070b14",
+  "lang": "es-CO",
+  "dir": "ltr",
+  "categories": [
+    "education",
+    "science",
+    "entertainment"
+  ],
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

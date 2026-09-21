@@ -1,0 +1,80 @@
+{
+  "name": "Centro de Ciencia Nova",
+  "short_name": "Nova Ciencia",
+  "description": "Explora el universo, la robótica, las energías limpias y la biotecnología en el Centro de Ciencia Nova con exposiciones interactivas y planetario 8K.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#070b14",
+  "theme_color": "#070b14",
+  "lang": "es-CO",
+  "dir": "ltr",
+  "categories": [
+    "education",
+    "science",
+    "entertainment"
+  ],
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Exposición Destacada",
+      "short_name": "Exposición",
+      "description": "Exploradores del Universo",
+      "url": "./index.html#exposicion",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Talleres y Actividades",
+      "short_name": "Talleres",
+      "description": "Robótica, Astronomía y Biología",
+      "url": "./index.html#actividades",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Planetario Domo 8K",
+      "short_name": "Planetario",
+      "description": "Funciones y Cartelera 8K",
+      "url": "./index.html#planetario",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Tarifas y Reservas",
+      "short_name": "Entradas",
+      "description": "Calculadora y compra de boletos",
+      "url": "./index.html#tarifas",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

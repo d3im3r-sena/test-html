@@ -183,6 +183,28 @@ body.menu-locked {
     box-shadow: 0 6px 18px rgba(37, 99, 235, 0.45);
 }
 
+.pwa-install-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0.52rem 1.15rem;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--color-cyan);
+    background: rgba(6, 182, 212, 0.12);
+    border: 1px solid rgba(6, 182, 212, 0.35);
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+
+.pwa-install-btn:hover {
+    background: rgba(6, 182, 212, 0.22);
+    border-color: var(--color-cyan);
+    transform: translateY(-2px);
+    box-shadow: 0 0 15px rgba(6, 182, 212, 0.3);
+}
+
 /* Botón menú móvil (hamburguesa) */
 .menu-toggle {
     display: none;

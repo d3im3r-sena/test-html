@@ -11,6 +11,9 @@ document.addEventListener('DOMContentLoaded', () => {
     initTicketCalculator();
     initFaqAccordion();
     initNewsletter();
+    initServiceWorker();
+    initPwaInstall();
+    initNetworkStatus();
 });
 
 /* ==========================================================================
@@ -440,5 +443,85 @@ function initNewsletter() {
             showToast(`¡Gracias! Te has suscrito con: ${input.value}`);
             input.value = '';
         }
+    });
+}
+
+/* ==========================================================================
+   8. PWA: Registro de Service Worker
+   ========================================================================== */
+function initServiceWorker() {
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js')
+                .then((registration) => {
+                    console.log('[PWA] Service Worker registrado exitosamente con scope:', registration.scope);
+                })
+                .catch((error) => {
+                    console.warn('[PWA] Fallo en registro de Service Worker:', error);
+                });
+        });
+    }
+}
+
+/* ==========================================================================
+   9. PWA: Gestión de Instalación (beforeinstallprompt)
+   ========================================================================== */
+let deferredPrompt = null;
+
+function initPwaInstall() {
+    const installBtn = document.getElementById('pwaInstallBtn');
+    const drawerInstallBtn = document.getElementById('pwaInstallDrawerBtn');
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+        // Prevenir el banner automático del navegador
+        e.preventDefault();
+        deferredPrompt = e;
+
+        // Mostrar botones de instalación personalizados
+        if (installBtn) installBtn.style.display = 'inline-flex';
+        if (drawerInstallBtn) drawerInstallBtn.style.display = 'inline-flex';
+
+        console.log('[PWA] Evento beforeinstallprompt capturado. Botones activados.');
+    });
+
+    function handleInstallClick() {
+        if (!deferredPrompt) return;
+
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choiceResult) => {
+            if (choiceResult.outcome === 'accepted') {
+                console.log('[PWA] El usuario aceptó la instalación.');
+                showToast('¡Instalando Centro de Ciencia Nova!');
+            } else {
+                console.log('[PWA] El usuario canceló la instalación.');
+            }
+            deferredPrompt = null;
+            if (installBtn) installBtn.style.display = 'none';
+            if (drawerInstallBtn) drawerInstallBtn.style.display = 'none';
+        });
+    }
+
+    if (installBtn) installBtn.addEventListener('click', handleInstallClick);
+    if (drawerInstallBtn) drawerInstallBtn.addEventListener('click', handleInstallClick);
+
+    window.addEventListener('appinstalled', () => {
+        console.log('[PWA] Aplicación instalada exitosamente.');
+        showToast('¡Nova instalada exitosamente como aplicación!');
+        deferredPrompt = null;
+        if (installBtn) installBtn.style.display = 'none';
+        if (drawerInstallBtn) drawerInstallBtn.style.display = 'none';
+    });
+}
+
+/* ==========================================================================
+   10. PWA: Detección de Estado de Red (Online / Offline)
+   ========================================================================== */
+function initNetworkStatus() {
+    window.addEventListener('online', () => {
+        showToast('Conexión a internet restablecida.');
+    });
+
+    window.addEventListener('offline', () => {
+        showToast('Modo sin conexión: El contenido en caché sigue disponible.');
     });
 }
