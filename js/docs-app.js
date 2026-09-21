@@ -272,18 +272,34 @@ class RoboDocsApp {
     typesetMath(element) {
         if (!element) return;
 
-        if (window.renderMathInElement) {
-            window.renderMathInElement(element, {
-                delimiters: [
-                    { left: '$$', right: '$$', display: true },
-                    { left: '$', right: '$', display: false },
-                    { left: '\\[', right: '\\]', display: true },
-                    { left: '\\(', right: '\\)', display: false }
-                ],
-                throwOnError: false
-            });
-        } else if (window.MathJax && window.MathJax.typesetPromise) {
-            window.MathJax.typesetPromise([element]).catch(err => console.warn(err));
+        const tryRender = () => {
+            if (window.renderMathInElement) {
+                try {
+                    window.renderMathInElement(element, {
+                        delimiters: [
+                            { left: '$$', right: '$$', display: true },
+                            { left: '$', right: '$', display: false },
+                            { left: '\\[', right: '\\]', display: true },
+                            { left: '\\(', right: '\\)', display: false }
+                        ],
+                        throwOnError: false
+                    });
+                    return true;
+                } catch (e) {
+                    console.warn('KaTeX render:', e);
+                }
+            }
+            if (window.MathJax && window.MathJax.typesetPromise) {
+                window.MathJax.typesetPromise([element]).catch(err => console.warn(err));
+                return true;
+            }
+            return false;
+        };
+
+        if (!tryRender()) {
+            setTimeout(tryRender, 250);
+            setTimeout(tryRender, 800);
+            setTimeout(tryRender, 2000);
         }
     }
 
