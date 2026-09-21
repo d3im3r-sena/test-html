@@ -1,0 +1,938 @@
+% =========================================================
+% template.tex  (NO tiene \documentclass ni \begin{document})
+    % Plantilla institucional robusta: modo claro,
+    % fallbacks de imágenes, minted, entornos de código claros/oscuros y macros docentes.
+    % =========================================================
+
+    % -------------------------
+    % CONFIG POR DEFECTO
+    % (En main.tex puedes sobrescribir con \renewcommand)
+    % -------------------------
+    \newcommand{\CourseName}{Laboratorio Inteligencia Artificial}
+    \newcommand{\CourseCode}{ING01336}
+    \newcommand{\Faculty}{Facultad de Ingenierías}
+    \newcommand{\Institution}{Politécnico Colombiano Jaime Isaza Cadavid}
+    \newcommand{\Instructor}{Deimer Miranda Montoya, MSc.(c).}
+    \newcommand{\Email}{deimer\_miranda91162@elpoli.edu.co}
+    \newcommand{\InstitutionLogo}{Template/LogoSena.png}
+
+    % Control global de imágenes: 1 = mostrar, 0 = no cargar
+    \newcommand{\UseImages}{1}
+
+    % -------------------------
+    % MOTOR Y FUENTES (ROBUSTO)
+    % -------------------------
+    \usepackage{iftex}
+    \ifPDFTeX
+    \usepackage[utf8]{inputenc}
+    \usepackage[T1]{fontenc}
+    \usepackage{lmodern}
+    \else
+    \usepackage{fontspec}
+    \usepackage[sfdefault]{noto}
+    \fi
+
+
+
+    % -------------------------
+    % PAQUETES
+    % -------------------------
+    \usetheme{Madrid}
+    \usepackage{xparse}
+    \usepackage{fontawesome5}
+    \usepackage{booktabs}
+    \usepackage{xcolor}
+    \usepackage{graphicx}
+    \usepackage{tikz}
+    \usetikzlibrary{calc,positioning,arrows.meta,mindmap,shapes.geometric}
+    \usepackage{hyperref}
+    \usepackage{tcolorbox}
+    \tcbuselibrary{minted,skins,breakable}
+
+    \hypersetup{colorlinks=true, linkcolor=blue, urlcolor=blue, citecolor=blue}
+
+    % -------------------------
+    % COLORES (INSTITUCIONAL)
+    % -------------------------
+    \definecolor{BrandYellow}{RGB}{255,185,62}
+    \definecolor{BrandGreen}{RGB}{20,196,134}
+    \definecolor{BrandBlue}{RGB}{30,60,120}
+    \definecolor{DarkBG}{RGB}{14,16,20}
+    \definecolor{DarkFG}{RGB}{235,235,235}
+
+    \definecolor{SoftGray}{RGB}{245,246,248}
+    \definecolor{MediumGray}{RGB}{210,213,218}
+    \definecolor{DarkGray}{RGB}{45,47,52}
+
+    % Fondos de código
+    \definecolor{pybg}{rgb}{0.12,0.18,0.30}
+    \definecolor{cppbg}{rgb}{0.10,0.10,0.10}
+    \definecolor{bashbg}{rgb}{0.2,0.2,0.2}
+
+    % Fondos específicos para código HTML
+    \definecolor{HtmlClaroFondo}{HTML}{F7F7F7}
+    \definecolor{HtmlClaroBorde}{HTML}{D0D0D0}
+    \definecolor{HtmlOscuroFondo}{HTML}{1E1E1E}
+    \definecolor{HtmlOscuroBorde}{HTML}{444444}
+
+    % -------------------------
+    % COLORES PARA BLOQUES (DIFERENTES)
+    % -------------------------
+    % Idea
+    \definecolor{IdeaTitle}{RGB}{30,60,120}     % azul
+    \definecolor{IdeaBody}{RGB}{235,241,255}    % azul muy claro
+
+    % Practice
+    \definecolor{PracticeTitle}{RGB}{20,120,90} % verde/teal
+    \definecolor{PracticeBody}{RGB}{232,250,245}
+
+    % Definition
+    \definecolor{DefTitle}{RGB}{90,70,160}      % violeta
+    \definecolor{DefBody}{RGB}{240,236,255}
+
+    % Result
+    \definecolor{ResultTitle}{RGB}{0,120,0}     % verde
+    \definecolor{ResultBody}{RGB}{235,250,235}
+
+    % Warning (alert)
+    \definecolor{WarnTitle}{RGB}{160,30,30}     % rojo
+    \definecolor{WarnBody}{RGB}{255,235,235}
+
+    % Comparación
+    \definecolor{CompareTitle}{RGB}{28,92,145}
+    \definecolor{CompareBody}{RGB}{235,245,252}
+
+    % Pregunta
+    \definecolor{QuestionTitle}{RGB}{176,112,20}
+    \definecolor{QuestionBody}{RGB}{255,247,229}
+
+    % Ejemplo
+    \definecolor{ExampleTitle}{RGB}{84,78,150}
+    \definecolor{ExampleBody}{RGB}{243,241,255}
+
+    % =========================================================
+    % TEMA VISUAL - SOLO MODO CLARO
+    % =========================================================
+    \setbeamercolor{background canvas}{bg=white}
+    \setbeamercolor{normal text}{fg=black,bg=white}
+    \setbeamercolor{structure}{fg=BrandBlue}
+    \setbeamercolor{itemize item}{fg=BrandBlue}
+    \setbeamercolor{itemize subitem}{fg=BrandBlue}
+    \setbeamercolor{enumerate item}{fg=BrandBlue}
+    \setbeamercolor{alerted text}{fg=WarnTitle}
+    \setbeamercolor{example text}{fg=PracticeTitle}
+    \setbeamercolor{caption name}{fg=BrandBlue}
+
+    % -------------------------
+    % Fondo tipo banda superior (frametitle)
+    % -------------------------
+    \setbeamercolor{frametitle}{fg=white,bg=BrandBlue}
+    \setbeamertemplate{frametitle}{
+        \nointerlineskip
+        \begin{beamercolorbox}[wd=\paperwidth,ht=0.5cm,dp=0.2cm,leftskip=0.6cm]{frametitle}
+            \usebeamerfont{frametitle}\insertframetitle
+        \end{beamercolorbox}
+    }
+
+    % -------------------------
+    % IMÁGENES (ROBUSTAS)
+    % -------------------------
+    \graphicspath{{Template/}{Images/}{Images2/}{Logos/}}
+
+    \newcommand{\smartimage}[2][0.9\linewidth]{%
+        \ifnum\UseImages=1
+        \IfFileExists{#2}{%
+            \includegraphics[width=#1]{#2}%
+        }{%
+            \begingroup
+            \setlength{\fboxsep}{4pt}%
+            \fbox{\parbox{#1}{\centering\scriptsize Imagen no encontrada:\\ \texttt{#2}}}%
+            \endgroup
+        }%
+        \fi
+    }
+
+    \newcommand{\smartlogo}[2][1.8cm]{%
+        \ifnum\UseImages=1
+        \IfFileExists{#2}{%
+            \includegraphics[height=#1]{#2}%
+        }{%
+            {\footnotesize\textbf{[Logo no encontrado]}}%
+        }%
+        \fi
+    }
+
+    % -------------------------
+    % CÓDIGO (MINTED)
+    % Se conservan entornos claros y oscuros de código independientemente del tema visual.
+    % Requiere compilar con -shell-escape y pygments instalado
+    % -------------------------
+    \usepackage{minted}
+    \usemintedstyle{monokai}
+
+    % =========================================================
+    % COLORES PARA ENTORNOS DE CÓDIGO
+    % =========================================================
+
+    % Fondo claro general
+    \definecolor{CodigoClaroFondo}{HTML}{F7F7F7}
+    \definecolor{CodigoClaroBorde}{HTML}{D0D0D0}
+
+    % Fondo oscuro general
+    \definecolor{CodigoOscuroFondo}{HTML}{1E1E1E}
+    \definecolor{CodigoOscuroBorde}{HTML}{444444}
+
+    % =========================================================
+    % ENTORNOS HTML CON RESALTADO DE SINTAXIS
+    % Todos los frames que los utilicen deben llevar [fragile].
+    % =========================================================
+
+    % Fragmentos cortos HTML con fondo claro y sin numeración
+    \newtcblisting{htmlcode}{
+        listing engine=minted,
+        minted language=html,
+        minted style=friendly,
+        minted options={
+            fontsize=\small,
+            breaklines=true,
+            autogobble=true,
+            stripnl=true,
+            tabsize=4,
+            encoding=utf8
+        },
+        colback=HtmlClaroFondo,
+        colframe=HtmlClaroBorde,
+        coltext=black,
+        boxrule=0.6pt,
+        arc=2mm,
+        left=2mm,
+        right=2mm,
+        top=0.0mm,
+        bottom=0.0mm,
+        before skip=1pt,
+        after skip=1pt,
+        listing only,
+        enhanced
+    }
+
+    % Fragmentos cortos HTML con fondo oscuro y sin numeración
+    \newtcblisting{htmlcodedark}{
+        listing engine=minted,
+        minted language=html,
+        minted style=monokai,
+        minted options={
+            fontsize=\small,
+            breaklines=true,
+            autogobble=true,
+            stripnl=true,
+            tabsize=4,
+            encoding=utf8
+        },
+        colback=HtmlOscuroFondo,
+        colframe=HtmlOscuroBorde,
+        coltext=white,
+        boxrule=0.6pt,
+        arc=2mm,
+        left=2mm,
+        right=2mm,
+        top=0.0mm,
+        bottom=0.0mm,
+        before skip=1pt,
+        after skip=1pt,
+        listing only,
+        enhanced
+    }
+
+    % =========================================================
+    % PYTHON
+    % =========================================================
+
+    % Python con fondo claro
+    \newtcblisting{pythoncode}{
+        listing engine=minted,
+        minted language=python,
+        minted style=friendly,
+        minted options={
+            fontsize=\small,
+            breaklines=true,
+            autogobble=true,
+            stripnl=true,
+            tabsize=4,
+            encoding=utf8
+        },
+        colback=CodigoClaroFondo,
+        colframe=CodigoClaroBorde,
+        coltext=black,
+        boxrule=0.6pt,
+        arc=2mm,
+        left=2mm,
+        right=2mm,
+        top=0.0mm,
+        bottom=0.0mm,
+        before skip=1pt,
+        after skip=1pt,
+        listing only,
+        enhanced
+    }
+
+    % Python con fondo oscuro
+    \newtcblisting{pythoncodedark}{
+        listing engine=minted,
+        minted language=python,
+        minted style=monokai,
+        minted options={
+            fontsize=\small,
+            breaklines=true,
+            autogobble=true,
+            stripnl=true,
+            tabsize=4,
+            encoding=utf8
+        },
+        colback=CodigoOscuroFondo,
+        colframe=CodigoOscuroBorde,
+        coltext=white,
+        boxrule=0.6pt,
+        arc=2mm,
+        left=2mm,
+        right=2mm,
+        top=0.0mm,
+        bottom=0.0mm,
+        before skip=1pt,
+        after skip=1pt,
+        listing only,
+        enhanced
+    }
+
+    % =========================================================
+    % C++
+    % =========================================================
+
+    % C++ con fondo claro
+    \newtcblisting{cppcode}{
+        listing engine=minted,
+        minted language=cpp,
+        minted style=friendly,
+        minted options={
+            fontsize=\small,
+            breaklines=true,
+            autogobble=true,
+            stripnl=true,
+            tabsize=4,
+            encoding=utf8
+        },
+        colback=CodigoClaroFondo,
+        colframe=CodigoClaroBorde,
+        coltext=black,
+        boxrule=0.6pt,
+        arc=2mm,
+        left=2mm,
+        right=2mm,
+        top=0.0mm,
+        bottom=0.0mm,
+        before skip=1pt,
+        after skip=1pt,
+        listing only,
+        enhanced
+    }
+
+    % C++ con fondo oscuro
+    \newtcblisting{cppcodedark}{
+        listing engine=minted,
+        minted language=cpp,
+        minted style=monokai,
+        minted options={
+            fontsize=\small,
+            breaklines=true,
+            autogobble=true,
+            stripnl=true,
+            tabsize=4,
+            encoding=utf8
+        },
+        colback=CodigoOscuroFondo,
+        colframe=CodigoOscuroBorde,
+        coltext=white,
+        boxrule=0.6pt,
+        arc=2mm,
+        left=2mm,
+        right=2mm,
+        top=0.0mm,
+        bottom=0.0mm,
+        before skip=1pt,
+        after skip=1pt,
+        listing only,
+        enhanced
+    }
+
+    % =========================================================
+    % CSS
+    % =========================================================
+
+    % CSS con fondo claro
+    \newtcblisting{csscode}{
+        listing engine=minted,
+        minted language=css,
+        minted style=friendly,
+        minted options={
+            fontsize=\small,
+            breaklines=true,
+            autogobble=true,
+            stripnl=true,
+            tabsize=4,
+            encoding=utf8
+        },
+        colback=CodigoClaroFondo,
+        colframe=CodigoClaroBorde,
+        coltext=black,
+        boxrule=0.6pt,
+        arc=2mm,
+        left=2mm,
+        right=2mm,
+        top=0.0mm,
+        bottom=0.0mm,
+        listing only,
+        enhanced
+    }
+
+    % CSS con fondo oscuro
+    \newtcblisting{csscodedark}{
+        listing engine=minted,
+        minted language=css,
+        minted style=monokai,
+        minted options={
+            fontsize=\small,
+            breaklines=true,
+            autogobble=true,
+            stripnl=true,
+            tabsize=4,
+            encoding=utf8
+        },
+        colback=CodigoOscuroFondo,
+        colframe=CodigoOscuroBorde,
+        coltext=white,
+        boxrule=0.6pt,
+        arc=2mm,
+        left=2mm,
+        right=2mm,
+        top=0.0mm,
+        bottom=0.0mm,
+        listing only,
+        enhanced
+    }
+
+    % =========================================================
+    % SQL
+    % =========================================================
+
+    % SQL con fondo claro
+    \newtcblisting{sqlcode}{
+        listing engine=minted,
+        minted language=sql,
+        minted style=friendly,
+        minted options={
+            fontsize=\small,
+            breaklines=true,
+            autogobble=true,
+            stripnl=true,
+            tabsize=2,
+            encoding=utf8
+        },
+        colback=CodigoClaroFondo,
+        colframe=CodigoClaroBorde,
+        coltext=black,
+        boxrule=0.6pt,
+        arc=2mm,
+        left=2mm,
+        right=2mm,
+        top=0.0mm,
+%        before skip=1pt,
+%        after skip=1pt,
+        bottom=0.0mm,
+        listing only,
+        enhanced
+    }
+
+    % SQL con fondo oscuro
+    \newtcblisting{sqlcodedark}{
+        listing engine=minted,
+        minted language=sql,
+        minted style=monokai,
+        minted options={
+            fontsize=\small,
+            breaklines=true,
+            autogobble=true,
+            stripnl=true,
+            tabsize=2,
+            encoding=utf8
+        },
+        colback=CodigoOscuroFondo,
+        colframe=CodigoOscuroBorde,
+        coltext=white,
+        boxrule=0.6pt,
+        arc=2mm,
+        left=2mm,
+        right=2mm,
+        top=0.0mm,
+        bottom=0.0mm,
+%        before skip=1pt,
+%        after skip=1pt,
+        listing only,
+        enhanced
+    }
+
+    % =========================================================
+    % JAVA
+    % =========================================================
+
+    % Java con fondo claro
+    \newtcblisting{javacode}{
+        listing engine=minted,
+        minted language=java,
+        minted style=friendly,
+        minted options={
+            fontsize=\small,
+            breaklines=true,
+            autogobble=true,
+            stripnl=true,
+            tabsize=4,
+            encoding=utf8
+        },
+        colback=CodigoClaroFondo,
+        colframe=CodigoClaroBorde,
+        coltext=black,
+        boxrule=0.6pt,
+        arc=2mm,
+        left=2mm,
+        right=2mm,
+        top=0.0mm,
+        bottom=0.0mm,
+%        before skip=1pt,
+%        after skip=1pt,
+        listing only,
+        enhanced
+    }
+
+    % Java con fondo oscuro
+    \newtcblisting{javacodedark}{
+        listing engine=minted,
+        minted language=java,
+        minted style=monokai,
+        minted options={
+            fontsize=\small,
+            breaklines=true,
+            autogobble=true,
+            stripnl=true,
+            tabsize=4,
+            encoding=utf8
+        },
+        colback=CodigoOscuroFondo,
+        colframe=CodigoOscuroBorde,
+        coltext=white,
+        boxrule=0.6pt,
+        arc=2mm,
+        left=2mm,
+        right=2mm,
+        top=0.0mm,
+        bottom=0.0mm,
+%        before skip=1pt,
+%        after skip=1pt,
+        listing only,
+        enhanced
+    }
+
+    % =========================================================
+    % BASH
+    % =========================================================
+
+    % Bash con fondo claro
+    \newtcblisting{bashcode}{
+        listing engine=minted,
+        minted language=bash,
+        minted style=friendly,
+        minted options={
+            fontsize=\small,
+            breaklines=true,
+            autogobble=true,
+            stripnl=true,
+            tabsize=4,
+            encoding=utf8
+        },
+        colback=CodigoClaroFondo,
+        colframe=CodigoClaroBorde,
+        coltext=black,
+        boxrule=0.6pt,
+        arc=2mm,
+        left=2mm,
+        right=2mm,
+        top=0.0mm,
+        bottom=0.0mm,
+%        before skip=1pt,
+%        after skip=1pt,
+        listing only,
+        enhanced
+    }
+
+    % Bash con fondo oscuro
+    \newtcblisting{bashcodedark}{
+        listing engine=minted,
+        minted language=bash,
+        minted style=monokai,
+        minted options={
+            fontsize=\small,
+            breaklines=true,
+            autogobble=true,
+            stripnl=true,
+            tabsize=4,
+            encoding=utf8
+        },
+        colback=CodigoOscuroFondo,
+        colframe=CodigoOscuroBorde,
+        coltext=white,
+        boxrule=0.6pt,
+        arc=2mm,
+        left=2mm,
+        right=2mm,
+        top=0.0mm,
+        bottom=0.0mm,
+%        before skip=1pt,
+%        after skip=1pt,
+        listing only,
+        enhanced
+    }
+
+    % =========================================================
+    % MONGODB / MONGOSH - FONDO CLARO
+    % =========================================================
+
+    \newtcblisting{mongodbcode}{
+        listing engine=minted,
+        minted language=javascript,
+        minted style=friendly,
+        minted options={
+            fontsize=\small,
+            breaklines=true,
+            autogobble=true,
+            stripnl=true,
+            tabsize=4,
+            encoding=utf8
+        },
+        colback=CodigoClaroFondo,
+        colframe=CodigoClaroBorde,
+        coltext=black,
+        boxrule=0.6pt,
+        arc=2mm,
+        left=2mm,
+        right=2mm,
+        top=0.0mm,
+        bottom=0.0mm,
+        listing only,
+        enhanced,
+        breakable
+    }
+
+    % =========================================================
+    % MONGODB / MONGOSH - FONDO OSCURO
+    % =========================================================
+
+    \newtcblisting{mongodbcodedark}{
+        listing engine=minted,
+        minted language=javascript,
+        minted style=monokai,
+        minted options={
+            fontsize=\small,
+            breaklines=true,
+            autogobble=true,
+            stripnl=true,
+            tabsize=4,
+            encoding=utf8
+        },
+        colback=CodigoOscuroFondo,
+        colframe=CodigoOscuroBorde,
+        coltext=white,
+        boxrule=0.6pt,
+        arc=2mm,
+        left=2mm,
+        right=2mm,
+        top=0.0mm,
+        bottom=0.0mm,
+        listing only,
+        enhanced,
+        breakable
+    }
+
+    % =========================================================
+    % CONSOLA / SALIDA DE TERMINAL - TEMA OSCURO
+    % =========================================================
+    \newtcblisting{consolecodedark}{
+        listing engine=minted,
+        minted language=text,
+        minted options={
+            breaklines,
+            stripnl=true,
+            breakanywhere,
+            fontsize=\small,
+            autogobble
+        },
+        listing only,
+        enhanced,
+        breakable,
+        colback=black!92,
+        colframe=black!65,
+        coltext=white,
+        boxrule=0.6pt,
+        arc=2mm,
+        left=2mm,
+        right=2mm,
+        top=0.0mm,
+        bottom=0.0mm,
+        before skip=2mm,
+        after skip=2mm
+    }
+    % =========================================================
+    % CONSOLA / SALIDA DE TERMINAL - TEMA CLARO
+    % =========================================================
+    \newtcblisting{consolecode}{
+        listing engine=minted,
+        minted language=text,
+        minted options={
+            breaklines,
+            stripnl=true,
+            breakanywhere,
+            fontsize=\small,
+            autogobble
+        },
+        listing only,
+        enhanced,
+        breakable,
+        colback=black!4,
+        colframe=black!30,
+        coltext=black,
+        boxrule=0.6pt,
+        arc=2mm,
+        left=2mm,
+        right=2mm,
+        top=0.0mm,
+        bottom=0.0mm,
+        before skip=2mm,
+        after skip=2mm
+    }
+
+    % -------------------------
+    % MACROS DOCENTES
+    % -------------------------
+    \newcommand{\SectionSlide}[2]{%
+        \begin{frame}
+            \vspace*{0.1cm}
+            \centering
+            \begin{tikzpicture}
+                \node[fill=BrandBlue, rounded corners,
+                minimum width=0.86\textwidth, minimum height=1.6cm,
+                text width=0.82\textwidth, align=center] (box)
+                {\color{white}\textbf{\huge #1}\\[2pt]\Large #2};
+            \end{tikzpicture}
+        \end{frame}
+    }
+
+    % =========================================================
+    % BLOQUES DOCENTES CON TÍTULO OPCIONAL + COLORES DIFERENTES
+    % =========================================================
+    % Idea: \Idea[Mi título]{Contenido}
+    \NewDocumentCommand{\Idea}{O{Idea clave} +m}{
+        \begingroup
+        \setbeamercolor{block title}{fg=white,bg=IdeaTitle}
+        \setbeamercolor{block body}{fg=black,bg=IdeaBody}
+        \begin{block}{\faLightbulb\ \,#1}
+            #2
+        \end{block}
+        \endgroup
+    }
+
+    % Practice
+    \NewDocumentCommand{\Practice}{O{Actividad práctica} +m}{
+        \begingroup
+        \setbeamercolor{block title}{fg=white,bg=PracticeTitle}
+        \setbeamercolor{block body}{fg=black,bg=PracticeBody}
+        \begin{block}{\faLaptopCode\ \,#1}
+            #2
+        \end{block}
+        \endgroup
+    }
+
+    % Definition
+    \NewDocumentCommand{\DefBlock}{O{Definición} +m}{
+        \begingroup
+        \setbeamercolor{block title}{fg=white,bg=DefTitle}
+        \setbeamercolor{block body}{fg=black,bg=DefBody}
+        \begin{block}{\faBook\ \,#1}
+            #2
+        \end{block}
+        \endgroup
+    }
+
+    % Result
+    \NewDocumentCommand{\Result}{O{Resultado} +m}{
+        \begingroup
+        \setbeamercolor{block title}{fg=white,bg=ResultTitle}
+        \setbeamercolor{block body}{fg=black,bg=ResultBody}
+        \begin{block}{\faCheckCircle\ \,#1}
+            #2
+        \end{block}
+        \endgroup
+    }
+
+    % Warning (alertblock)
+    \NewDocumentCommand{\Warning}{O{Atención} +m}{
+        \begingroup
+        \setbeamercolor{block title alerted}{fg=white,bg=WarnTitle}
+        \setbeamercolor{block body alerted}{fg=black,bg=WarnBody}
+        \begin{alertblock}{\faExclamationTriangle\ \,#1}
+            #2
+        \end{alertblock}
+        \endgroup
+    }
+
+    % Comparación: \Compare[Mi título]{Contenido}
+    \NewDocumentCommand{\Compare}{O{Comparación} +m}{
+        \begingroup
+        \setbeamercolor{block title}{fg=white,bg=CompareTitle}
+        \setbeamercolor{block body}{fg=black,bg=CompareBody}
+        \begin{block}{\faBalanceScale\ \,#1}
+            #2
+        \end{block}
+        \endgroup
+    }
+
+    % Pregunta: \Question[Mi título]{Contenido}
+    \NewDocumentCommand{\Question}{O{Pregunta guía} +m}{
+        \begingroup
+        \setbeamercolor{block title}{fg=white,bg=QuestionTitle}
+        \setbeamercolor{block body}{fg=black,bg=QuestionBody}
+        \begin{block}{\faQuestionCircle\ \,#1}
+            #2
+        \end{block}
+        \endgroup
+    }
+
+    % Ejemplo: \ExampleBlock[Mi título]{Contenido}
+    % Se usa ExampleBlock para evitar colisión con comandos propios de Beamer.
+    \NewDocumentCommand{\ExampleBlock}{O{Ejemplo} +m}{
+        \begingroup
+        \setbeamercolor{block title}{fg=white,bg=ExampleTitle}
+        \setbeamercolor{block body}{fg=black,bg=ExampleBody}
+        \begin{block}{\faPuzzlePiece\ \,#1}
+            #2
+        \end{block}
+        \endgroup
+    }
+
+    \newcommand{\AgendaSlide}{%
+        \begin{frame}{Agenda}
+            \tableofcontents
+        \end{frame}
+    }
+
+    % =========================================================
+    % SLIDE DE NORMAS INSTITUCIONALES
+    % =========================================================
+    \newcommand{\NormasSlide}{%
+        \begin{frame}{Normas del curso}
+            \begin{minipage}{0.32\textwidth}
+                \centering
+                \smartimage[1cm]{Template/Puntual.png}\\[0.2cm]
+                \textbf{Cumple con los horarios y demuestra compromiso académico en cada sesión.}
+            \end{minipage}\hfill
+            \begin{minipage}{0.32\textwidth}
+                \centering
+                \smartimage[1cm]{Template/Actitud.png}\\[0.2cm]
+                \textbf{Mantén una actitud profesional, ética y orientada al aprendizaje continuo.}
+            \end{minipage}\hfill
+            \begin{minipage}{0.32\textwidth}
+                \centering
+                \smartimage[1cm]{Template/Comunicacion.png}\\[0.2cm]
+                \textbf{Comunica tus ideas con claridad, respeto y fundamento técnico.}
+            \end{minipage}
+
+            \vspace{0.2cm}
+
+            \begin{minipage}{0.48\textwidth}
+                \centering
+                \smartimage[1cm]{Template/Participacion.png}\\[0.2cm]
+                \textbf{Participa activamente y contribuye al trabajo colaborativo.}
+            \end{minipage}\hfill
+            \begin{minipage}{0.48\textwidth}
+                \centering
+                \smartimage[1cm]{Template/Cuidado.png}\\[0.2cm]
+                \textbf{Haz uso responsable de los recursos, equipos e instalaciones.}
+            \end{minipage}
+        \end{frame}
+    }
+
+
+    % -------------------------
+    % PIE DE PÁGINA
+    % -------------------------
+    \setbeamertemplate{navigation symbols}{}
+
+    \setbeamertemplate{footline}{
+        \leavevmode
+        \hbox to \paperwidth{%
+            \hspace{0.35cm}%
+            % Zona izquierda: navegación y numeración
+            \makebox[0.22\paperwidth][l]{%
+                {\tiny
+                    \Acrobatmenu{PrevPage}{\textcolor{black}{$\triangleleft$}}%
+                    \hspace{0.22cm}%
+                    \insertpagenumber/\insertpresentationendpage%
+                    \hspace{0.22cm}%
+                    \Acrobatmenu{NextPage}{\textcolor{black}{$\triangleright$}}%
+                }%
+            }%
+            \hfill%
+            % Zona derecha: instructor + logo
+            \makebox[0.70\paperwidth][r]{%
+                {\tiny\Instructor}%
+                \hspace{0.18cm}%
+                \raisebox{-0.10cm}{\smartlogo[0.34cm]{\InstitutionLogo}}%
+                %            \raisebox{-0.10cm}{\smartlogo[0.34cm]{Template/LogoSena.png}}%
+            }%
+            \hspace{0.35cm}%
+        }%
+        \vspace{0.08cm}
+    }
+    % -------------------------
+    % PORTADA (UN COMANDO)
+    % -------------------------
+    \newcommand{\TitleSlide}{%
+        \begin{frame}
+            \centering
+            %\smartlogo[1.8cm]{logo.png}
+
+            \vspace{0.4cm}
+            \color{BrandGreen}\rule{0.9\textwidth}{0.5pt}
+
+            \vspace{0.6cm}
+            {\color{black}\fontsize{24pt}{28pt}\selectfont \CourseName\\
+                \CourseCode}
+
+            \vfill
+            {\color{black}\fontsize{16pt}{18pt}\selectfont \Faculty \par \Institution}
+
+            \vfill
+            {\color{black}\fontsize{14pt}{18pt}\selectfont \Instructor \par \Email}
+
+            \vspace{0.6cm}
+            \color{BrandGreen}\rule{0.9\textwidth}{0.5pt}
+        \end{frame}
+    }
+
+% =========================================================
+% ESPACIADO AUTOMÁTICO ANTES DE ECUACIONES DISPLAY
+% =========================================================
+
+\newlength{\DisplayMathTopSpace}
+\setlength{\DisplayMathTopSpace}{-0.2cm}
+
+\let\OriginalDisplayMath\[
+\renewcommand{\[}{%
+    \vspace{\DisplayMathTopSpace}%
+    \OriginalDisplayMath
+}

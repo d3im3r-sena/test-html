@@ -3,7 +3,7 @@
  * Soporte offline 100%, almacenamiento en caché y estrategia Stale-While-Revalidate
  */
 
-const CACHE_NAME = 'robodocs-cache-v1';
+const CACHE_NAME = 'robodocs-cache-v2';
 const STATIC_ASSETS = [
     './',
     './index.html',
@@ -13,10 +13,8 @@ const STATIC_ASSETS = [
     './manifest.webmanifest',
     './manifest.json',
     './docs/index.json',
-    './docs/cinematica_manipulador_6dof.tex',
-    './docs/control_dinamica_trayectorias.tex',
-    './docs/seguridad_cobots_iso.tex',
-    './docs/vision_artificial_pick_and_place.tex',
+    './docs/Servicio_2.tex',
+    './docs/template-slide.tex',
     './icons/icon.svg',
     './icons/icon-192.png',
     './icons/icon-512.png',

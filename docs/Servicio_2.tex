@@ -1,0 +1,3488 @@
+\documentclass[aspectratio=169]{beamer}
+
+% =========================================================
+% TEMPLATE INSTITUCIONAL
+% =========================================================
+% Compilar con XeLaTeX/LuaLaTeX y -shell-escape si se usan bloques minted.
+\input{~/Dropbox/Latex/TemplateSlides/template-slide.tex}
+
+% =========================================================
+% CONFIGURACIÓN DEL CURSO
+% =========================================================
+\renewcommand{\CourseName}{Robótica del Servicio}
+\renewcommand{\CourseCode}{ING 01335}
+\renewcommand{\Faculty}{Facultad de Ingeniería}
+\renewcommand{\Institution}{Politécnico Colombiano Jaime Isaza Cadavid}
+\renewcommand{\Instructor}{Deimer Miranda Montoya, MSc.(c).}
+\renewcommand{\Email}{deimer\_miranda91162@elpoli.edu.co}
+\renewcommand{\InstitutionLogo}{Template/LogoPoli.png}
+
+\title{Robótica del Servicio}
+\subtitle{Clase 2: Geometría en el plano, Linux y Python}
+\author{\Instructor}
+\institute{\Institution\\\Faculty}
+\date{2026-2}
+
+\begin{document}
+
+\TitleSlide
+\NormasSlide
+
+% =========================================================
+% CLASE 3
+% =========================================================
+\section{Clase 3}
+
+\SectionSlide
+{Clase 3: Rotaciones y transformaciones en el plano}
+{Del sistema local del robot al sistema global}
+
+% =========================================================
+\begin{frame}{Propósito de la clase}
+
+    Al finalizar esta sesión, el estudiante estará en capacidad de:
+
+    \begin{itemize}
+        \item interpretar geométricamente una rotación en el plano;
+        \item identificar el sentido positivo y negativo de una rotación;
+        \item deducir la matriz de rotación bidimensional;
+        \item aplicar matrices de rotación a puntos y vectores.
+    \end{itemize}
+
+    \vspace{0.3cm}
+
+    \Idea{
+        La rotación permite describir cómo cambia la orientación de un punto,
+        vector o sistema de referencia en el plano.
+    }
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Propósito de la clase}
+
+    Además, el estudiante estará en capacidad de:
+
+    \begin{itemize}
+        \item comprender las principales propiedades de $R(\theta)$;
+        \item realizar composiciones e inversiones de rotaciones;
+        \item transformar coordenadas entre el sistema local del robot y el sistema global;
+        \item validar y representar los resultados utilizando Python, NumPy y Matplotlib.
+    \end{itemize}
+
+    \vspace{0.3cm}
+
+    \Idea{
+        La matriz de rotación permite expresar matemáticamente cómo cambia la
+        representación de un punto o vector cuando cambia su orientación.
+    }
+
+\end{frame}
+
+% =========================================================
+\section{Representaciones de un punto}
+
+\SectionSlide
+{Representaciones de un punto}
+{Cartesiano y polar}
+
+% =========================================================
+\begin{frame}{Coordenadas cartesianas}
+
+    \begin{columns}[T]
+
+        \begin{column}{0.52\textwidth}
+
+            En el plano, un punto puede representarse mediante sus coordenadas:
+
+            \[
+            P=(x,y)
+            \]
+
+            o en forma vectorial:
+
+            \[
+            \mathbf{p}
+            =
+            \begin{bmatrix}
+                x\\
+                y
+            \end{bmatrix}
+            \]
+
+            donde:
+
+            \begin{itemize}
+                \item $x$ es la componente horizontal;
+                \item $y$ es la componente vertical.
+            \end{itemize}
+
+        \end{column}
+
+        \begin{column}{0.45\textwidth}
+
+            \begin{center}
+                \begin{tikzpicture}[scale=0.65]
+
+                    \draw[-{Latex[length=3mm]}, thick]
+                    (0,0) -- (5.8,0) node[right] {$X$};
+
+                    \draw[-{Latex[length=3mm]}, thick]
+                    (0,0) -- (0,4.8) node[above] {$Y$};
+
+                    \coordinate (P) at (4,3);
+
+                    \draw[dashed] (P) -- (4,0);
+                    \draw[dashed] (P) -- (0,3);
+
+                    \filldraw[BrandBlue] (P) circle (2.5pt);
+                    \node[above right] at (P) {$P=(x,y)$};
+
+                    \node[below] at (4,0) {$x$};
+                    \node[left] at (0,3) {$y$};
+
+                \end{tikzpicture}
+            \end{center}
+
+        \end{column}
+
+    \end{columns}
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Coordenadas cartesianas}
+
+    \DefBlock[Idea clave]{
+        Las coordenadas cartesianas describen un punto a partir de sus
+        proyecciones sobre los ejes $X$ y $Y$.
+    }
+
+    \vspace{0.3cm}
+
+    \Idea{
+        Una coordenada no tiene sentido completo si no sabemos respecto a qué
+        sistema de referencia fue medida.
+    }
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Coordenadas polares}
+
+    \begin{columns}[T]
+
+        \begin{column}{0.55\textwidth}
+
+            El mismo punto también puede describirse mediante:
+
+            \[
+            P=(\rho,\alpha)
+            \]
+
+            donde:
+
+            \begin{itemize}
+                \item $\rho$ es la distancia desde el origen;
+                \item $\alpha$ es el ángulo medido desde el eje positivo $X$.
+            \end{itemize}
+
+            \[
+            \rho=\sqrt{x^2+y^2}
+            \]
+
+            \[
+            \alpha=\operatorname{atan2}(y,x)
+            \]
+
+        \end{column}
+
+        \begin{column}{0.42\textwidth}
+
+            \begin{center}
+                \begin{tikzpicture}[scale=0.65]
+
+                    \draw[-{Latex[length=3mm]}, thick]
+                    (0,0) -- (5.8,0) node[right] {$X$};
+
+                    \draw[-{Latex[length=3mm]}, thick]
+                    (0,0) -- (0,4.8) node[above] {$Y$};
+
+                    \coordinate (P) at (4,3);
+
+                    \draw[-{Latex[length=3mm]}, very thick, BrandBlue]
+                    (0,0) -- (P);
+
+                    \filldraw[BrandYellow] (P) circle (2.5pt);
+                    \node[above right] at (P) {$P$};
+
+                    \draw[->, BrandGreen, thick]
+                    (1.0,0) arc[start angle=0,end angle=36.87,radius=1.0];
+
+                    \node at (1.25,0.45) {$\alpha$};
+                    \node at (2.25,1.9) {$\rho$};
+
+                \end{tikzpicture}
+            \end{center}
+
+        \end{column}
+
+    \end{columns}
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Coordenadas polares}
+
+    \Idea{
+        En coordenadas polares, un punto queda definido por
+        \textbf{magnitud y dirección}.
+    }
+
+    \vspace{0.3cm}
+
+    \DefBlock[Comparación]{
+        En coordenadas cartesianas usamos componentes $(x,y)$.
+        En coordenadas polares usamos distancia y dirección $(\rho,\alpha)$.
+    }
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Un mismo punto, dos descripciones}
+
+    \begin{columns}[T]
+
+        \begin{column}{0.47\textwidth}
+
+            \[
+            P=(x,y)
+            \]
+
+            describe el punto mediante sus componentes sobre los ejes.
+
+            \vspace{0.3cm}
+
+            \[
+            P=(\rho,\alpha)
+            \]
+
+            describe el mismo punto mediante su distancia al origen y su dirección.
+
+        \end{column}
+
+        \begin{column}{0.50\textwidth}
+
+            \begin{center}
+                \begin{tikzpicture}[scale=0.62]
+
+                    \draw[-{Latex[length=3mm]}, thick]
+                    (0,0) -- (5.8,0) node[right] {$X$};
+
+                    \draw[-{Latex[length=3mm]}, thick]
+                    (0,0) -- (0,4.8) node[above] {$Y$};
+
+                    \coordinate (P) at (4,3);
+
+                    \draw[-{Latex[length=3mm]}, very thick, BrandBlue]
+                    (0,0) -- (P);
+
+                    \draw[dashed] (P) -- (4,0);
+                    \draw[dashed] (P) -- (0,3);
+
+                    \filldraw[BrandYellow] (P) circle (2.5pt);
+
+                    \node[above right] at (P) {$P$};
+                    \node[below] at (4,0) {$x$};
+                    \node[left] at (0,3) {$y$};
+                    \node at (2.2,1.9) {$\rho$};
+
+                    \draw[->, BrandGreen, thick]
+                    (1.0,0) arc[start angle=0,end angle=36.87,radius=1.0];
+
+                    \node at (1.25,0.45) {$\alpha$};
+
+                \end{tikzpicture}
+            \end{center}
+
+        \end{column}
+
+    \end{columns}
+
+
+
+    \DefBlock[Equivalencia]{
+        Ambas representaciones describen exactamente el mismo punto.
+        Lo que cambia es la manera de expresar su posición.
+    }
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{De polares a cartesianas}
+
+    Si se conocen la magnitud $\rho$ y el ángulo $\alpha$, pueden obtenerse
+    las coordenadas cartesianas mediante trigonometría:
+
+    \[
+    x=\rho\cos\alpha
+    \]
+
+    \[
+    y=\rho\sin\alpha
+    \]
+
+    por tanto:
+
+    \[
+    \boxed{
+        \mathbf{p}
+        =
+        \begin{bmatrix}
+            \rho\cos\alpha\\
+            \rho\sin\alpha
+    \end{bmatrix}}
+    \]
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{De polares a cartesianas}
+
+    \begin{center}
+        \begin{tikzpicture}[scale=0.72]
+
+            \draw[-{Latex[length=3mm]}, thick]
+            (0,0) -- (6,0) node[right] {$X$};
+
+            \draw[-{Latex[length=3mm]}, thick]
+            (0,0) -- (0,4.8) node[above] {$Y$};
+
+            \coordinate (P) at (4,3);
+
+            \draw[-{Latex[length=3mm]}, very thick, BrandBlue]
+            (0,0) -- (P);
+
+            \draw[dashed] (P) -- (4,0);
+            \draw[dashed] (P) -- (0,3);
+
+            \filldraw[BrandYellow] (P) circle (2.5pt);
+
+            \node[below] at (2,0) {$x=\rho\cos\alpha$};
+            \node[left] at (0,1.5) {$y=\rho\sin\alpha$};
+
+            \node at (2.25,1.9) {$\rho$};
+
+            \draw[->, BrandGreen, thick]
+            (1.0,0) arc[start angle=0,end angle=36.87,radius=1.0];
+
+            \node at (1.25,0.45) {$\alpha$};
+
+        \end{tikzpicture}
+    \end{center}
+
+    \Result{
+        La representación polar permite expresar un punto a partir de una magnitud
+        y una dirección.
+    }
+
+\end{frame}
+
+% =========================================================
+\section{Rotaciones en el plano}
+
+\SectionSlide
+{Rotaciones en el plano}
+{¿Qué significa girar un vector?}
+
+% =========================================================
+\begin{frame}{¿Qué significa rotar un vector?}
+
+    Si el vector se escribe como:
+
+    \[
+    \mathbf{p}
+    =
+    \begin{bmatrix}
+        \rho\cos\alpha\\
+        \rho\sin\alpha
+    \end{bmatrix}
+    \]
+
+    y luego se rota un ángulo $\theta$, entonces:
+
+    \[
+    \alpha'=\alpha+\theta
+    \]
+
+    mientras que la magnitud permanece igual:
+
+    \[
+    \rho'=\rho
+    \]
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{¿Qué significa rotar un vector?}
+
+    Por tanto:
+
+    \[
+    \mathbf{p}'
+    =
+    \begin{bmatrix}
+        \rho\cos(\alpha+\theta)\\
+        \rho\sin(\alpha+\theta)
+    \end{bmatrix}
+    \]
+
+
+
+    \begin{center}
+        \begin{tikzpicture}[scale=0.6]
+
+            \draw[-{Latex[length=3mm]}, thick]
+            (0,0) -- (6,0) node[right] {$X$};
+
+            \draw[-{Latex[length=3mm]}, thick]
+            (0,0) -- (0,5) node[above] {$Y$};
+
+            \draw[-{Latex[length=3mm]}, very thick, BrandBlue]
+            (0,0) -- (4,1.6);
+
+            \draw[-{Latex[length=3mm]}, very thick, BrandGreen]
+            (0,0) -- (2.4,3.6);
+
+            \node[right] at (4,1.6) {$\mathbf{p}$};
+            \node[above] at (2.4,3.6) {$\mathbf{p}'$};
+
+            \draw[->, BrandYellow, thick]
+            (1.2,0.48) arc[start angle=21.8,end angle=56.3,radius=1.3];
+
+            \node at (1.75,1.2) {$\theta$};
+
+        \end{tikzpicture}
+    \end{center}
+
+    \Idea{
+        Esta idea será el punto de partida para deducir la matriz de rotación
+        $R(\theta)$.
+    }
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Convención de signos}
+
+    Utilizaremos la convención matemática habitual:
+
+    \begin{itemize}
+        \item rotación \textbf{antihoraria}: $\theta>0$;
+        \item rotación \textbf{horaria}: $\theta<0$.
+    \end{itemize}
+
+    \vspace{0.3cm}
+
+    \begin{center}
+        \begin{tikzpicture}[scale=0.85]
+
+            \draw[-{Latex[length=3mm]}, thick]
+            (-0.4,0) -- (5,0) node[right] {$X$};
+
+            \draw[-{Latex[length=3mm]}, thick]
+            (0,-0.4) -- (0,3.5) node[above] {$Y$};
+
+            \draw[-{Latex[length=3mm]}, very thick, BrandBlue]
+            (0,0) -- (3.2,0.7)
+            node[right] {$\mathbf{p}$};
+
+            \draw[-{Latex[length=3mm]}, very thick, BrandGreen]
+            (0,0) -- (2.2,2.5)
+            node[above] {$\mathbf{p}'$};
+
+            \draw[->, thick, BrandYellow]
+            (1.1,0.24)
+            arc[start angle=12,end angle=49,radius=1.12];
+
+            \node at (1.45,0.85) {$+\theta$};
+
+        \end{tikzpicture}
+    \end{center}
+
+\end{frame}
+
+% =========================================================
+\section{Deducción de la matriz de rotación}
+
+\SectionSlide
+{Matriz de rotación}
+{Construcción a partir de la trigonometría}
+
+% =========================================================
+\begin{frame}{Partimos de la geometría}
+
+    Antes de la rotación:
+
+    \[
+    x=\rho\cos\alpha
+    \]
+
+    \[
+    y=\rho\sin\alpha
+    \]
+
+    Después de una rotación $\theta$:
+
+    \[
+    x'=\rho\cos(\alpha+\theta)
+    \]
+
+    \[
+    y'=\rho\sin(\alpha+\theta)
+    \]
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Identidades trigonométricas}
+
+    Ahora utilizamos las identidades trigonométricas:
+
+    \[
+    \cos(\alpha+\theta)
+    =
+    \cos\alpha\cos\theta
+    -
+    \sin\alpha\sin\theta
+    \]
+
+    \[
+    \sin(\alpha+\theta)
+    =
+    \sin\alpha\cos\theta
+    +
+    \cos\alpha\sin\theta
+    \]
+
+    \vspace{0.3cm}
+
+    \Idea{
+        Estas identidades permiten pasar de la interpretación geométrica
+        a una expresión matricial.
+    }
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Desarrollo de la coordenada \texorpdfstring{$x'$}{x'}}
+
+    Partimos de:
+
+    \[
+    x'=\rho\cos(\alpha+\theta)
+    \]
+
+    Sustituyendo la identidad trigonométrica:
+
+    \[
+    x'
+    =
+    \rho
+    \left(
+    \cos\alpha\cos\theta
+    -
+    \sin\alpha\sin\theta
+    \right)
+    \]
+
+    Distribuyendo $\rho$:
+
+    \[
+    x'
+    =
+    \rho\cos\alpha\cos\theta
+    -
+    \rho\sin\alpha\sin\theta
+    \]
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Desarrollo de la coordenada \texorpdfstring{$x'$}{x'}}
+
+    Sabemos que:
+
+    \[
+    \rho\cos\alpha=x,
+    \qquad
+    \rho\sin\alpha=y
+    \]
+
+    por tanto:
+
+    \[
+    x'
+    =
+    x\cos\theta
+    -
+    y\sin\theta
+    \]
+
+    \[
+    \boxed{
+        x'=x\cos\theta-y\sin\theta
+    }
+    \]
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Desarrollo de la coordenada \texorpdfstring{$y'$}{y'}}
+
+    Partimos de:
+
+    \[
+    y'=\rho\sin(\alpha+\theta)
+    \]
+
+    Sustituyendo:
+
+    \[
+    y'
+    =
+    \rho
+    \left(
+    \sin\alpha\cos\theta
+    +
+    \cos\alpha\sin\theta
+    \right)
+    \]
+
+    Distribuyendo:
+
+    \[
+    y'
+    =
+    \rho\sin\alpha\cos\theta
+    +
+    \rho\cos\alpha\sin\theta
+    \]
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Desarrollo de la coordenada \texorpdfstring{$y'$}{y'}}
+
+    Sabemos que:
+
+    \[
+    \rho\cos\alpha=x,
+    \qquad
+    \rho\sin\alpha=y
+    \]
+
+    por tanto:
+
+    \[
+    y'
+    =
+    y\cos\theta
+    +
+    x\sin\theta
+    \]
+
+    \[
+    \boxed{
+        y'=x\sin\theta+y\cos\theta
+    }
+    \]
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Escribamos las dos ecuaciones}
+
+    Los resultados anteriores son:
+
+    \[
+    x'
+    =
+    x\cos\theta-y\sin\theta
+    \]
+
+    \[
+    y'
+    =
+    x\sin\theta+y\cos\theta
+    \]
+
+    \vspace{0.3cm}
+
+    Estas dos ecuaciones describen cómo cambian las coordenadas de un vector
+    cuando se rota un ángulo $\theta$.
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Forma matricial}
+
+    Podemos organizarlas matricialmente:
+
+    \[
+    \begin{bmatrix}
+        x'\\
+        y'
+    \end{bmatrix}
+    =
+    \begin{bmatrix}
+        \cos\theta & -\sin\theta\\
+        \sin\theta & \cos\theta
+    \end{bmatrix}
+    \begin{bmatrix}
+        x\\
+        y
+    \end{bmatrix}
+    \]
+
+    Definimos:
+
+    \[
+    \boxed{
+        R(\theta)
+        =
+        \begin{bmatrix}
+            \cos\theta & -\sin\theta\\
+            \sin\theta & \cos\theta
+    \end{bmatrix}}
+    \]
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Matriz de rotación}
+
+    La operación de rotación puede escribirse de manera compacta:
+
+    \[
+    \boxed{
+        \mathbf{p}'=R(\theta)\mathbf{p}
+    }
+    \]
+
+    donde:
+
+    \[
+    R(\theta)
+    =
+    \begin{bmatrix}
+        \cos\theta & -\sin\theta\\
+        \sin\theta & \cos\theta
+    \end{bmatrix}
+    \]
+
+    y:
+
+    \[
+    \mathbf{p}
+    =
+    \begin{bmatrix}
+        x\\
+        y
+    \end{bmatrix}
+    \]
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Matriz de rotación}
+
+    \DefBlock[Matriz de rotación]{
+        Es una transformación lineal que modifica la orientación de un vector
+        sin modificar su magnitud.
+    }
+
+    \vspace{0.3cm}
+
+    \Idea{
+        Esta matriz será la base para relacionar el sistema local del robot
+        con el sistema global.
+    }
+
+\end{frame}
+
+% =========================================================
+\section{Aplicación de la matriz}
+
+\SectionSlide
+{Aplicación de la matriz de rotación}
+{Del modelo matemático al cálculo}
+
+% =========================================================
+\begin{frame}{Ejemplo: rotación de \texorpdfstring{$90^\circ$}{90 grados}}
+
+    Considere:
+
+    \[
+    \mathbf{p}
+    =
+    \begin{bmatrix}
+        3\\
+        1
+    \end{bmatrix}
+    \]
+
+    y una rotación:
+
+    \[
+    \theta=90^\circ
+    =
+    \frac{\pi}{2}
+    \]
+
+    La matriz será:
+
+    \[
+    R\left(\frac{\pi}{2}\right)
+    =
+    \begin{bmatrix}
+        \cos\frac{\pi}{2} & -\sin\frac{\pi}{2}\\
+        \sin\frac{\pi}{2} & \cos\frac{\pi}{2}
+    \end{bmatrix}
+    \]
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Ejemplo: rotación de \texorpdfstring{$90^\circ$}{90 grados}}
+
+    Como:
+
+    \[
+    \cos\frac{\pi}{2}=0,
+    \qquad
+    \sin\frac{\pi}{2}=1
+    \]
+
+    entonces:
+
+    \[
+    R\left(\frac{\pi}{2}\right)
+    =
+    \begin{bmatrix}
+        0 & -1\\
+        1 & 0
+    \end{bmatrix}
+    \]
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Ejemplo: operación matricial}
+
+    Aplicamos:
+
+    \[
+    \mathbf{p}'
+    =
+    R\left(\frac{\pi}{2}\right)\mathbf{p}
+    \]
+
+    \[
+    \mathbf{p}'
+    =
+    \begin{bmatrix}
+        0 & -1\\
+        1 & 0
+    \end{bmatrix}
+    \begin{bmatrix}
+        3\\
+        1
+    \end{bmatrix}
+    \]
+
+    Realizando el producto:
+
+    \[
+    x'
+    =
+    (0)(3)+(-1)(1)
+    =
+    -1
+    \]
+
+    \[
+    y'
+    =
+    (1)(3)+(0)(1)
+    =
+    3
+    \]
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Ejemplo: operación matricial}
+
+    Por tanto:
+
+    \[
+    \boxed{
+        \mathbf{p}'
+        =
+        \begin{bmatrix}
+            -1\\
+            3
+    \end{bmatrix}}
+    \]
+
+    \vspace{0.4cm}
+
+    \Result{
+        El vector $(3,1)$ rotado $90^\circ$ en sentido antihorario
+        se convierte en $(-1,3)$.
+    }
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Comprobación de la magnitud}
+
+    Antes de rotar:
+
+    \[
+    \|\mathbf{p}\|
+    =
+    \sqrt{3^2+1^2}
+    =
+    \sqrt{10}
+    \]
+
+    Después de rotar:
+
+    \[
+    \|\mathbf{p}'\|
+    =
+    \sqrt{(-1)^2+3^2}
+    =
+    \sqrt{10}
+    \]
+
+    Por tanto:
+
+    \[
+    \boxed{
+        \|\mathbf{p}'\|=\|\mathbf{p}\|
+    }
+    \]
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Comprobación de la magnitud}
+
+    \Idea{
+        Una rotación modifica las coordenadas del vector, pero conserva
+        su longitud.
+    }
+
+    \vspace{0.3cm}
+
+    \Result{
+        Esta propiedad será muy importante cuando representemos velocidades,
+        mediciones y sistemas de referencia.
+    }
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Otro ejemplo: rotación de \texorpdfstring{$-45^\circ$}{-45 grados}}
+
+    Considere:
+
+    \[
+    \mathbf{p}
+    =
+    \begin{bmatrix}
+        2\\
+        4
+    \end{bmatrix},
+    \qquad
+    \theta=-45^\circ
+    \]
+
+    Primero:
+
+    \[
+    \theta
+    =
+    -\frac{\pi}{4}
+    \]
+
+    Entonces:
+
+    \[
+    R\left(-\frac{\pi}{4}\right)
+    =
+    \begin{bmatrix}
+        \cos(-\pi/4) & -\sin(-\pi/4)\\
+        \sin(-\pi/4) & \cos(-\pi/4)
+    \end{bmatrix}
+    \]
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Otro ejemplo: rotación de \texorpdfstring{$-45^\circ$}{-45 grados}}
+
+    Utilizando:
+
+    \[
+    \cos(-\pi/4)=\frac{\sqrt{2}}{2}
+    \]
+
+    \[
+    \sin(-\pi/4)=-\frac{\sqrt{2}}{2}
+    \]
+
+    La matriz resulta:
+
+    \[
+    R\left(-\frac{\pi}{4}\right)
+    =
+    \begin{bmatrix}
+        \frac{\sqrt{2}}{2} & \frac{\sqrt{2}}{2}\\
+        -\frac{\sqrt{2}}{2} & \frac{\sqrt{2}}{2}
+    \end{bmatrix}
+    \]
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Rotación de \texorpdfstring{$-45^\circ$}{-45 grados}: cálculo}
+
+    Aplicando la rotación:
+
+    \[
+    \mathbf{p}'
+    =
+    R\left(-\frac{\pi}{4}\right)
+    \begin{bmatrix}
+        2\\
+        4
+    \end{bmatrix}
+    \]
+
+    \[
+    x'
+    =
+    \frac{\sqrt{2}}{2}(2)
+    +
+    \frac{\sqrt{2}}{2}(4)
+    =
+    3\sqrt{2}
+    \]
+
+    \[
+    y'
+    =
+    -\frac{\sqrt{2}}{2}(2)
+    +
+    \frac{\sqrt{2}}{2}(4)
+    =
+    \sqrt{2}
+    \]
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Rotación de \texorpdfstring{$-45^\circ$}{-45 grados}: resultado}
+
+    Por tanto:
+
+    \[
+    \boxed{
+        \mathbf{p}'
+        =
+        \begin{bmatrix}
+            3\sqrt{2}\\
+            \sqrt{2}
+    \end{bmatrix}}
+    \]
+
+    \vspace{0.4cm}
+
+    \Result{
+        Este ejemplo muestra una rotación en sentido horario,
+        por eso el ángulo utilizado es negativo.
+    }
+
+\end{frame}
+
+% =========================================================
+\section{Propiedades de la matriz de rotación}
+
+\SectionSlide
+{Propiedades de $R(\theta)$}
+{¿Qué hace especial a una matriz de rotación?}
+
+% =========================================================
+\begin{frame}{Rotación nula}
+
+    Para:
+
+    \[
+    \theta=0
+    \]
+
+    tenemos:
+
+    \[
+    R(0)
+    =
+    \begin{bmatrix}
+        \cos0 & -\sin0\\
+        \sin0 & \cos0
+    \end{bmatrix}
+    \]
+
+    Como:
+
+    \[
+    \cos0=1,
+    \qquad
+    \sin0=0
+    \]
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Rotación nula}
+
+    Resulta:
+
+    \[
+    \boxed{
+        R(0)
+        =
+        \begin{bmatrix}
+            1&0\\
+            0&1
+        \end{bmatrix}
+        =
+        I
+    }
+    \]
+
+    Por tanto:
+
+    \[
+    R(0)\mathbf{p}=\mathbf{p}
+    \]
+
+    \vspace{0.3cm}
+
+    \Idea{
+        La rotación de cero grados no modifica el vector.
+    }
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Rotación inversa}
+
+    Si primero realizamos una rotación $\theta$, para regresar a la
+    orientación original debemos aplicar:
+
+    \[
+    -\theta
+    \]
+
+    Por tanto:
+
+    \[
+    R^{-1}(\theta)=R(-\theta)
+    \]
+
+    Además:
+
+    \[
+    R(\theta)R(-\theta)=I
+    \]
+
+    \vspace{0.3cm}
+
+    \DefBlock[Interpretación]{
+        La matriz inversa permite deshacer una rotación.
+    }
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Transpuesta e inversa}
+
+    La transpuesta de:
+
+    \[
+    R(\theta)
+    =
+    \begin{bmatrix}
+        \cos\theta & -\sin\theta\\
+        \sin\theta & \cos\theta
+    \end{bmatrix}
+    \]
+
+    es:
+
+    \[
+    R^T(\theta)
+    =
+    \begin{bmatrix}
+        \cos\theta & \sin\theta\\
+        -\sin\theta & \cos\theta
+    \end{bmatrix}
+    \]
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Transpuesta e inversa}
+
+    Observe que:
+
+    \[
+    R^T(\theta)=R(-\theta)
+    \]
+
+    y por tanto:
+
+    \[
+    \boxed{
+        R^{-1}(\theta)=R^T(\theta)
+    }
+    \]
+
+    \vspace{0.4cm}
+
+    \Result{
+        Las matrices de rotación son matrices ortogonales.
+    }
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Ortogonalidad}
+
+    Una matriz es ortogonal cuando:
+
+    \[
+    R^TR=I
+    \]
+
+    Para una matriz de rotación:
+
+    \[
+    R^T(\theta)R(\theta)
+    =
+    I
+    \]
+
+    Esta propiedad explica matemáticamente por qué se conserva la magnitud.
+
+    \[
+    \mathbf{p}'=R\mathbf{p}
+    \]
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Ortogonalidad y magnitud}
+
+    Si:
+
+    \[
+    \mathbf{p}'=R\mathbf{p}
+    \]
+
+    entonces:
+
+    \[
+    \|\mathbf{p}'\|^2
+    =
+    \mathbf{p}'^T\mathbf{p}'
+    \]
+
+    \[
+    =
+    (R\mathbf{p})^T(R\mathbf{p})
+    \]
+
+    \[
+    =
+    \mathbf{p}^TR^TR\mathbf{p}
+    \]
+
+    \[
+    =
+    \mathbf{p}^T\mathbf{p}
+    \]
+
+    por tanto:
+
+    \[
+    \boxed{\|\mathbf{p}'\|=\|\mathbf{p}\|}
+    \]
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Determinante de una rotación}
+
+    Para:
+
+    \[
+    R(\theta)
+    =
+    \begin{bmatrix}
+        \cos\theta & -\sin\theta\\
+        \sin\theta & \cos\theta
+    \end{bmatrix}
+    \]
+
+    el determinante es:
+
+    \[
+    \det(R)
+    =
+    \cos^2\theta+\sin^2\theta
+    \]
+
+    utilizando:
+
+    \[
+    \cos^2\theta+\sin^2\theta=1
+    \]
+
+    obtenemos:
+
+    \[
+    \boxed{
+        \det(R)=1
+    }
+    \]
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Determinante de una rotación}
+
+    \Idea{
+        Una rotación pura conserva longitudes, ángulos y orientación geométrica
+        del sistema.
+    }
+
+    \vspace{0.3cm}
+
+    \Result{
+        El determinante igual a uno indica que la transformación no escala ni
+        refleja el espacio.
+    }
+
+\end{frame}
+
+% =========================================================
+\section{Composición de rotaciones}
+
+\SectionSlide
+{Composición de rotaciones}
+{¿Qué ocurre cuando giramos varias veces?}
+
+% =========================================================
+\begin{frame}{Dos rotaciones consecutivas}
+
+    Supongamos que primero aplicamos una rotación $\theta_1$:
+
+    \[
+    \mathbf{p}_1
+    =
+    R(\theta_1)\mathbf{p}
+    \]
+
+    y posteriormente una rotación $\theta_2$:
+
+    \[
+    \mathbf{p}_2
+    =
+    R(\theta_2)\mathbf{p}_1
+    \]
+
+    Sustituyendo:
+
+    \[
+    \mathbf{p}_2
+    =
+    R(\theta_2)
+    R(\theta_1)
+    \mathbf{p}
+    \]
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Dos rotaciones consecutivas}
+
+    La rotación equivalente es:
+
+    \[
+    \boxed{
+        R(\theta_2)R(\theta_1)
+        =
+        R(\theta_1+\theta_2)
+    }
+    \]
+
+    \vspace{0.3cm}
+
+    \Idea{
+        Varias rotaciones alrededor del mismo origen pueden representarse como
+        una única rotación equivalente.
+    }
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Ejemplo de composición}
+
+    Supongamos:
+
+    \[
+    \theta_1=30^\circ
+    \]
+
+    \[
+    \theta_2=45^\circ
+    \]
+
+    La rotación equivalente será:
+
+    \[
+    \theta_T
+    =
+    30^\circ+45^\circ
+    \]
+
+    \[
+    \boxed{
+        \theta_T=75^\circ
+    }
+    \]
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Ejemplo de composición}
+
+    Por tanto:
+
+    \[
+    R(45^\circ)R(30^\circ)
+    =
+    R(75^\circ)
+    \]
+
+    \vspace{0.3cm}
+
+    \Result{
+        Varias rotaciones alrededor del mismo origen pueden combinarse
+        en una única rotación equivalente.
+    }
+
+\end{frame}
+
+% =========================================================
+\section{Sistemas de referencia}
+
+\SectionSlide
+{Sistemas de referencia}
+{¿Cómo ve el robot un punto y cómo lo ve el mundo?}
+
+% =========================================================
+\begin{frame}{Recordemos los dos sistemas}
+
+    Consideraremos dos sistemas de referencia:
+
+    \begin{itemize}
+        \item $\{G\}$: sistema global;
+        \item $\{R\}$: sistema local unido al robot.
+    \end{itemize}
+
+    La pose del robot respecto al sistema global es:
+
+    \[
+    {}^{G}\mathbf{x}_R
+    =
+    \begin{bmatrix}
+        x_R\\
+        y_R\\
+        \theta
+    \end{bmatrix}
+    \]
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Recordemos los dos sistemas}
+
+    \Idea{
+        El robot puede medir objetos respecto a sus propios ejes,
+        pero para navegar necesitamos frecuentemente expresar esas posiciones
+        respecto al mundo.
+    }
+
+    \vspace{0.3cm}
+
+    \DefBlock[Sistema global y sistema local]{
+        El sistema global describe el mundo. El sistema local se mueve
+        con el robot y depende de su posición y orientación.
+    }
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Un punto expresado en el robot}
+
+    Supongamos que un sensor detecta un objeto en:
+
+    \[
+    {}^{R}\mathbf{p}
+    =
+    \begin{bmatrix}
+        x_R^{p}\\
+        y_R^{p}
+    \end{bmatrix}
+    \]
+
+    La notación:
+
+    \[
+    {}^{R}\mathbf{p}
+    \]
+
+    significa:
+
+    \begin{center}
+        ``las coordenadas del punto $\mathbf{p}$ están expresadas
+        respecto al sistema del robot $\{R\}$''.
+    \end{center}
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Un punto expresado en el robot}
+
+    \DefBlock[Importante]{
+        El mismo punto físico puede tener coordenadas diferentes dependiendo
+        del sistema de referencia desde el cual se describa.
+    }
+
+    \vspace{0.3cm}
+
+    \Idea{
+        Por eso siempre debemos indicar respecto a qué sistema de referencia
+        están expresadas las coordenadas.
+    }
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Primero: considerar únicamente orientación}
+
+    Supongamos inicialmente que los orígenes de ambos sistemas coinciden.
+
+    Si el sistema del robot está rotado un ángulo $\theta$ respecto al global:
+
+    \[
+    {}^{G}\mathbf{p}
+    =
+    R(\theta)
+    {}^{R}\mathbf{p}
+    \]
+
+    es decir:
+
+    \[
+    \boxed{
+        {}^{G}\mathbf{p}
+        =
+        \begin{bmatrix}
+            \cos\theta & -\sin\theta\\
+            \sin\theta & \cos\theta
+        \end{bmatrix}
+        {}^{R}\mathbf{p}
+    }
+    \]
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Primero: considerar únicamente orientación}
+
+    \Idea{
+        La matriz $R(\theta)$ permite expresar en coordenadas globales
+        un vector que originalmente estaba expresado en coordenadas del robot.
+    }
+
+    \vspace{0.3cm}
+
+    \Result{
+        Si solo cambia la orientación, basta con aplicar una rotación.
+    }
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Pero el robot también está trasladado}
+
+    En un escenario real, el robot normalmente no se encuentra en el origen.
+
+    Su posición global es:
+
+    \[
+    {}^{G}\mathbf{p}_R
+    =
+    \begin{bmatrix}
+        x_R\\
+        y_R
+    \end{bmatrix}
+    \]
+
+    Por tanto, para transformar un punto local al sistema global debemos:
+
+    \begin{enumerate}
+        \item rotar el punto según la orientación del robot;
+        \item trasladarlo hasta la posición global del robot.
+    \end{enumerate}
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Pero el robot también está trasladado}
+
+    Esto produce:
+
+    \[
+    \boxed{
+        {}^{G}\mathbf{p}
+        =
+        {}^{G}\mathbf{p}_R
+        +
+        R(\theta)
+        {}^{R}\mathbf{p}
+    }
+    \]
+
+    \vspace{0.3cm}
+
+    \Idea{
+        Esta ecuación combina dos operaciones: rotación y traslación.
+    }
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Interpretación de la transformación}
+
+    La expresión:
+
+    \[
+    {}^{G}\mathbf{p}
+    =
+    {}^{G}\mathbf{p}_R
+    +
+    R(\theta)
+    {}^{R}\mathbf{p}
+    \]
+
+    contiene dos operaciones diferentes:
+
+    \vspace{0.3cm}
+
+    \[
+    \underbrace{
+        R(\theta)\,{}^{R}\mathbf{p}
+    }_{\text{rotación}}
+    \]
+
+    y:
+
+    \[
+    \underbrace{
+        {}^{G}\mathbf{p}_R
+    }_{\text{traslación}}
+    \]
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Interpretación de la transformación}
+
+    \Result{
+        Rotación y traslación permiten relacionar matemáticamente
+        el sistema del robot con el sistema global.
+    }
+
+    \vspace{0.3cm}
+
+    \Idea{
+        Esta operación será fundamental para interpretar mediciones de sensores
+        y ubicarlas dentro del mundo.
+    }
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Ejemplo: punto local a coordenadas globales}
+
+    Suponga que el robot está en:
+
+    \[
+    {}^{G}\mathbf{p}_R
+    =
+    \begin{bmatrix}
+        2\\
+        3
+    \end{bmatrix}
+    \]
+
+    con orientación:
+
+    \[
+    \theta=90^\circ
+    \]
+
+    y detecta un objeto a:
+
+    \[
+    {}^{R}\mathbf{p}
+    =
+    \begin{bmatrix}
+        2\\
+        0
+    \end{bmatrix}
+    \]
+
+    respecto a su propio sistema.
+
+    Queremos calcular:
+
+    \[
+    {}^{G}\mathbf{p}
+    \]
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Ejemplo: aplicar la rotación}
+
+    Para:
+
+    \[
+    \theta=90^\circ
+    \]
+
+    tenemos:
+
+    \[
+    R(90^\circ)
+    =
+    \begin{bmatrix}
+        0&-1\\
+        1&0
+    \end{bmatrix}
+    \]
+
+    Entonces:
+
+    \[
+    R(90^\circ)
+    {}^{R}\mathbf{p}
+    =
+    \begin{bmatrix}
+        0&-1\\
+        1&0
+    \end{bmatrix}
+    \begin{bmatrix}
+        2\\
+        0
+    \end{bmatrix}
+    \]
+
+    \[
+    =
+    \begin{bmatrix}
+        0\\
+        2
+    \end{bmatrix}
+    \]
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Ejemplo: aplicar la rotación}
+
+    \Result{
+        El objeto se encuentra $2$ unidades en la dirección global $Y$
+        respecto al robot.
+    }
+
+    \vspace{0.3cm}
+
+    \Idea{
+        La rotación cambió la forma en que se expresa el punto local,
+        pero todavía falta sumar la posición global del robot.
+    }
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Ejemplo: aplicar la traslación}
+
+    Ahora sumamos la posición global del robot:
+
+    \[
+    {}^{G}\mathbf{p}
+    =
+    \begin{bmatrix}
+        2\\
+        3
+    \end{bmatrix}
+    +
+    \begin{bmatrix}
+        0\\
+        2
+    \end{bmatrix}
+    \]
+
+    Por tanto:
+
+    \[
+    \boxed{
+        {}^{G}\mathbf{p}
+        =
+        \begin{bmatrix}
+            2\\
+            5
+    \end{bmatrix}}
+    \]
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Ejemplo: aplicar la traslación}
+
+    \Result{
+        Aunque el objeto se encuentra en $(2,0)$ respecto al robot,
+        su posición respecto al sistema global es $(2,5)$.
+    }
+
+    \vspace{0.3cm}
+
+    \Idea{
+        El punto local primero se rota y luego se traslada hasta la ubicación
+        global del robot.
+    }
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Representación geométrica}
+
+    \begin{center}
+        \begin{tikzpicture}[scale=0.72]
+
+            % Sistema global
+            \draw[-{Latex[length=3mm]}, thick]
+            (0,0) -- (7,0) node[right] {$X_G$};
+
+            \draw[-{Latex[length=3mm]}, thick]
+            (0,0) -- (0,6) node[above] {$Y_G$};
+
+            % Robot
+            \coordinate (R) at (2,3);
+
+            \begin{scope}[shift={(R)},rotate=90]
+
+                \draw[
+                fill=BrandBlue!15,
+                draw=BrandBlue,
+                thick
+                ]
+                (-0.4,-0.3) rectangle (0.4,0.3);
+
+                \draw[-{Latex[length=2.5mm]}, very thick, BrandGreen]
+                (0,0) -- (1.4,0) node[right] {$x_R$};
+
+                \draw[-{Latex[length=2.5mm]}, very thick, BrandGreen]
+                (0,0) -- (0,1.2) node[above] {$y_R$};
+
+            \end{scope}
+
+            \node[right] at (2.15,2.7) {Robot};
+
+            % Punto global
+            \filldraw[BrandYellow]
+            (2,5) circle (3pt);
+
+            \node[right] at (2.1,5)
+            {$P$};
+
+            % Línea local
+            \draw[dashed, thick]
+            (R) -- (2,5);
+
+            \node[right] at (2.15,4)
+            {$2$};
+
+            % Proyecciones
+            \draw[dashed]
+            (2,0) -- (2,3);
+
+            \draw[dashed]
+            (0,3) -- (2,3);
+
+            \node[below] at (2,0) {$2$};
+            \node[left] at (0,3) {$3$};
+
+        \end{tikzpicture}
+    \end{center}
+
+\end{frame}
+
+% =========================================================
+\section{Transformación inversa}
+
+\SectionSlide
+{Transformación inversa}
+{Del sistema global al sistema del robot}
+
+% =========================================================
+\begin{frame}{¿Y si conocemos el punto global?}
+
+    Partimos de:
+
+    \[
+    {}^{G}\mathbf{p}
+    =
+    {}^{G}\mathbf{p}_R
+    +
+    R(\theta)
+    {}^{R}\mathbf{p}
+    \]
+
+    Restamos la posición del robot:
+
+    \[
+    {}^{G}\mathbf{p}
+    -
+    {}^{G}\mathbf{p}_R
+    =
+    R(\theta)
+    {}^{R}\mathbf{p}
+    \]
+
+    Multiplicamos por la inversa:
+
+    \[
+    {}^{R}\mathbf{p}
+    =
+    R^{-1}(\theta)
+    \left(
+    {}^{G}\mathbf{p}
+    -
+    {}^{G}\mathbf{p}_R
+    \right)
+    \]
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{¿Y si conocemos el punto global?}
+
+    Como:
+
+    \[
+    R^{-1}(\theta)=R^T(\theta)
+    \]
+
+    obtenemos:
+
+    \[
+    \boxed{
+        {}^{R}\mathbf{p}
+        =
+        R^T(\theta)
+        \left(
+        {}^{G}\mathbf{p}
+        -
+        {}^{G}\mathbf{p}_R
+        \right)}
+    \]
+
+    \vspace{0.3cm}
+
+    \Result{
+        Esta expresión permite representar un punto global desde el sistema
+        local del robot.
+    }
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Interpretación de la transformación inversa}
+
+    Para pasar de coordenadas globales a coordenadas del robot:
+
+    \begin{enumerate}
+        \item restamos la posición global del robot;
+        \item aplicamos la rotación inversa.
+    \end{enumerate}
+
+    Matemáticamente:
+
+    \[
+    {}^{R}\mathbf{p}
+    =
+    R(-\theta)
+    \left(
+    {}^{G}\mathbf{p}
+    -
+    {}^{G}\mathbf{p}_R
+    \right)
+    \]
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Interpretación de la transformación inversa}
+
+    \Idea{
+        La transformación directa responde:
+
+        \textit{¿Dónde está este punto del robot visto desde el mundo?}
+
+        La transformación inversa responde:
+
+        \textit{¿Dónde está este punto del mundo visto desde el robot?}
+    }
+
+\end{frame}
+
+% =========================================================
+\section{Validación con Python}
+
+\SectionSlide
+{Validación computacional}
+{NumPy como herramienta para comprobar la matemática}
+
+% =========================================================
+\begin{frame}[fragile]{Construcción de la matriz con NumPy}
+
+    \begin{pythoncodedark}
+        import numpy as np
+
+        theta_deg = 60
+        theta = np.deg2rad(theta_deg)
+
+        R = np.array([
+            [np.cos(theta), -np.sin(theta)],
+            [np.sin(theta),  np.cos(theta)]
+            ])
+
+        print(R)
+    \end{pythoncodedark}
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Construcción de la matriz con NumPy}
+
+    \DefBlock[Importante]{
+        Las funciones trigonométricas de NumPy trabajan con ángulos
+        expresados en radianes.
+    }
+
+    \vspace{0.3cm}
+
+    \Idea{
+        Por esta razón, primero convertimos los grados a radianes usando
+        \texttt{np.deg2rad}.
+    }
+
+\end{frame}
+
+% =========================================================
+\begin{frame}[fragile]{Rotar un vector con NumPy}
+
+    \begin{pythoncodedark}
+        import numpy as np
+
+        theta = np.deg2rad(60)
+
+        R = np.array([
+            [np.cos(theta), -np.sin(theta)],
+            [np.sin(theta),  np.cos(theta)]
+            ])
+
+        p = np.array([4.0, 1.0])
+
+        p_rotado = R @ p
+
+        print("Vector original:", p)
+        print("Vector rotado:", p_rotado)
+    \end{pythoncodedark}
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Rotar un vector con NumPy}
+
+    \Idea{
+        El operador \texttt{@} realiza el producto matricial.
+    }
+
+    \vspace{0.3cm}
+
+    \Result{
+        El resultado computacional debe coincidir con el producto
+        $R(\theta)\mathbf{p}$ desarrollado manualmente.
+    }
+
+\end{frame}
+
+% =========================================================
+\begin{frame}[fragile]{Comprobar la conservación de la magnitud}
+
+    \begin{pythoncodedark}
+        import numpy as np
+
+        theta = np.deg2rad(60)
+
+        R = np.array([
+            [np.cos(theta), -np.sin(theta)],
+            [np.sin(theta),  np.cos(theta)]
+            ])
+
+        p = np.array([4.0, 1.0])
+        p_rotado = R @ p
+
+        print("Norma original:", np.linalg.norm(p))
+        print("Norma rotada:", np.linalg.norm(p_rotado))
+    \end{pythoncodedark}
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Comprobar la conservación de la magnitud}
+
+    \Result{
+        La norma del vector antes y después de la rotación debe ser la misma,
+        salvo pequeñas diferencias numéricas por redondeo.
+    }
+
+    \vspace{0.3cm}
+
+    \Idea{
+        Esta prueba computacional confirma una propiedad matemática:
+        una rotación cambia la dirección, pero no la longitud del vector.
+    }
+
+\end{frame}
+
+% =========================================================
+\begin{frame}[fragile]{Verificar propiedades de \texorpdfstring{$R$}{R}}
+
+    \begin{pythoncodedark}
+        import numpy as np
+
+        theta = np.deg2rad(35)
+
+        R = np.array([
+            [np.cos(theta), -np.sin(theta)],
+            [np.sin(theta),  np.cos(theta)]
+            ])
+
+        print("R:")
+        print(R)
+
+        print("R.T @ R:")
+        print(R.T @ R)
+
+        print("Determinante:")
+        print(np.linalg.det(R))
+    \end{pythoncodedark}
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Verificar propiedades de \texorpdfstring{$R$}{R}}
+
+    El resultado esperado es aproximadamente:
+
+    \[
+    R^TR=I
+    \]
+
+    y:
+
+    \[
+    \det(R)=1
+    \]
+
+    \vspace{0.3cm}
+
+    \Result{
+        NumPy permite verificar computacionalmente las propiedades algebraicas
+        de la matriz de rotación.
+    }
+
+\end{frame}
+
+% =========================================================
+\begin{frame}[fragile]{Transformación local a global}
+
+    Suponga:
+
+    \[
+    {}^{G}\mathbf{p}_R=(3,2),
+    \qquad
+    \theta=40^\circ,
+    \qquad
+    {}^{R}\mathbf{p}=(2,1)
+    \]
+
+    \begin{pythoncodedark}
+        import numpy as np
+
+        p_robot = np.array([3.0, 2.0])
+        p_local = np.array([2.0, 1.0])
+
+        theta = np.deg2rad(40)
+    \end{pythoncodedark}
+
+\end{frame}
+
+% =========================================================
+\begin{frame}[fragile]{Transformación local a global}
+
+    \begin{pythoncodedark}
+        R = np.array([
+            [np.cos(theta), -np.sin(theta)],
+            [np.sin(theta),  np.cos(theta)]
+            ])
+
+        p_global = p_robot + R @ p_local
+
+        print("Punto global:", p_global)
+    \end{pythoncodedark}
+
+
+
+    \Idea{
+        Este código implementa la relación:
+        \[
+        {}^{G}\mathbf{p}
+        =
+        {}^{G}\mathbf{p}_R+
+        R(\theta){}^{R}\mathbf{p}
+        \]
+    }
+
+\end{frame}
+
+% =========================================================
+\section{Visualización}
+
+\SectionSlide
+{Visualización geométrica}
+{Verificar que el resultado tenga sentido}
+
+% =========================================================
+\begin{frame}[fragile]{Graficar un vector y su rotación}
+
+    \begin{pythoncodedark}
+        import numpy as np
+        import matplotlib.pyplot as plt
+
+        p = np.array([4.0, 1.0])
+        theta = np.deg2rad(60)
+
+        R = np.array([
+            [np.cos(theta), -np.sin(theta)],
+            [np.sin(theta),  np.cos(theta)]
+            ])
+
+        pr = R @ p
+    \end{pythoncodedark}
+
+\end{frame}
+
+% =========================================================
+\begin{frame}[fragile]{Graficar un vector y su rotación}
+
+    \begin{pythoncodedark}
+        plt.quiver(0, 0, p[0], p[1],
+        angles="xy", scale_units="xy",
+        scale=1, label="Original")
+
+        plt.quiver(0, 0, pr[0], pr[1],
+        angles="xy", scale_units="xy",
+        scale=1, label="Rotado")
+    \end{pythoncodedark}
+
+\end{frame}
+
+% =========================================================
+\begin{frame}[fragile]{Completar la gráfica}
+
+    \begin{pythoncodedark}
+        plt.axhline(0)
+        plt.axvline(0)
+
+        plt.xlim(-6, 6)
+        plt.ylim(-6, 6)
+
+        plt.xlabel("X")
+        plt.ylabel("Y")
+
+        plt.axis("equal")
+        plt.grid()
+        plt.legend()
+
+        plt.show()
+    \end{pythoncodedark}
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Completar la gráfica}
+
+    \Idea{
+        Una gráfica permite detectar rápidamente errores de signo,
+        cuadrante o sentido de rotación.
+    }
+
+    \vspace{0.3cm}
+
+    \Result{
+        Si el resultado gráfico no coincide con la interpretación geométrica,
+        es probable que exista un error en el signo del ángulo o en la matriz.
+    }
+
+\end{frame}
+
+% =========================================================
+\section{Laboratorio}
+
+\SectionSlide
+{Laboratorio de la sesión}
+{Calcular, transformar y visualizar}
+
+% =========================================================
+\begin{frame}{Parte 1: desarrollo manual}
+
+    Considere el vector:
+
+    \[
+    \mathbf{p}
+    =
+    \begin{bmatrix}
+        3\\
+        -2
+    \end{bmatrix}
+    \]
+
+    Realice manualmente las siguientes rotaciones:
+
+    \[
+    \theta_1=30^\circ
+    \]
+
+    \[
+    \theta_2=120^\circ
+    \]
+
+    \[
+    \theta_3=-60^\circ
+    \]
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Parte 1: desarrollo manual}
+
+    Para cada caso:
+
+    \begin{enumerate}
+        \item convierta el ángulo a radianes;
+        \item construya $R(\theta)$;
+        \item calcule $\mathbf{p}'=R(\theta)\mathbf{p}$;
+        \item calcule la magnitud antes y después;
+        \item determine el cuadrante del vector resultante.
+    \end{enumerate}
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Parte 2: composición de rotaciones}
+
+    Para:
+
+    \[
+    \mathbf{p}
+    =
+    \begin{bmatrix}
+        2\\
+        1
+    \end{bmatrix}
+    \]
+
+    aplique consecutivamente:
+
+    \[
+    \theta_1=25^\circ
+    \]
+
+    y:
+
+    \[
+    \theta_2=50^\circ
+    \]
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Parte 2: composición de rotaciones}
+
+    Calcule manualmente:
+
+    \begin{enumerate}
+        \item $R(\theta_1)$;
+        \item $R(\theta_2)$;
+        \item $R(\theta_2)R(\theta_1)$;
+        \item el vector resultante;
+        \item una única matriz $R(\theta_1+\theta_2)$;
+        \item compare ambos resultados.
+    \end{enumerate}
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Parte 3: sistema local y global}
+
+    Un robot posee la pose:
+
+    \[
+    {}^{G}\mathbf{x}_R
+    =
+    \begin{bmatrix}
+        4\\
+        3\\
+        60^\circ
+    \end{bmatrix}
+    \]
+
+    Un sensor detecta un objeto en:
+
+    \[
+    {}^{R}\mathbf{p}
+    =
+    \begin{bmatrix}
+        3\\
+        1
+    \end{bmatrix}
+    \]
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Parte 3: sistema local y global}
+
+    Calcule manualmente:
+
+    \begin{enumerate}
+        \item la matriz $R(60^\circ)$;
+        \item el punto local rotado;
+        \item la posición global del objeto;
+        \item la distancia entre el robot y el objeto.
+    \end{enumerate}
+
+    Utilice:
+
+    \[
+    {}^{G}\mathbf{p}
+    =
+    {}^{G}\mathbf{p}_R+
+    R(\theta){}^{R}\mathbf{p}
+    \]
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Parte 4: transformación inversa}
+
+    Considere:
+
+    \[
+    {}^{G}\mathbf{p}_R
+    =
+    \begin{bmatrix}
+        -2\\
+        4
+    \end{bmatrix}
+    \]
+
+    \[
+    \theta=135^\circ
+    \]
+
+    y un objeto ubicado globalmente en:
+
+    \[
+    {}^{G}\mathbf{p}
+    =
+    \begin{bmatrix}
+        1\\
+        7
+    \end{bmatrix}
+    \]
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Parte 4: transformación inversa}
+
+    Determine sus coordenadas respecto al robot utilizando:
+
+    \[
+    {}^{R}\mathbf{p}
+    =
+    R^T(\theta)
+    \left(
+    {}^{G}\mathbf{p}
+    -
+    {}^{G}\mathbf{p}_R
+    \right)
+    \]
+
+    \vspace{0.3cm}
+
+    Finalmente, interprete el resultado geométricamente.
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Parte 5: validación computacional}
+
+    Después de realizar los cálculos manuales:
+
+    \begin{enumerate}
+        \item implemente cada ejercicio con NumPy;
+        \item compare los resultados manuales y computacionales;
+        \item calcule el error absoluto entre ambos resultados;
+    \end{enumerate}
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Parte 5: validación computacional}
+
+    Además:
+
+    \begin{enumerate}
+        \setcounter{enumi}{3}
+        \item grafique los vectores antes y después de cada rotación;
+        \item grafique el sistema global y el sistema local del robot;
+        \item represente gráficamente los puntos transformados.
+    \end{enumerate}
+
+    \vspace{0.3cm}
+
+    \Practice{
+        El código debe implementar las expresiones matemáticas estudiadas.
+        Python se utilizará para comprobar y visualizar los resultados,
+        no para sustituir el desarrollo manual.
+    }
+
+\end{frame}
+
+% =========================================================
+\section{Cierre}
+
+\SectionSlide
+{Cierre de la sesión}
+{De la geometría a los sistemas de referencia}
+
+% =========================================================
+\begin{frame}{¿Qué construimos hoy?}
+
+    Partimos de un vector:
+
+    \[
+    \mathbf{p}
+    =
+    \begin{bmatrix}
+        x\\
+        y
+    \end{bmatrix}
+    \]
+
+    y construimos matemáticamente:
+
+    \[
+    \boxed{
+        R(\theta)
+        =
+        \begin{bmatrix}
+            \cos\theta & -\sin\theta\\
+            \sin\theta & \cos\theta
+    \end{bmatrix}}
+    \]
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{¿Qué construimos hoy?}
+
+    Luego utilizamos esta matriz para:
+
+    \begin{itemize}
+        \item rotar vectores;
+        \item componer rotaciones;
+        \item invertir rotaciones;
+        \item relacionar sistemas de referencia;
+        \item transformar coordenadas locales a globales y viceversa.
+    \end{itemize}
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{La ecuación más importante de la sesión}
+
+    Para un robot ubicado en:
+
+    \[
+    {}^{G}\mathbf{p}_R
+    =
+    \begin{bmatrix}
+        x_R\\
+        y_R
+    \end{bmatrix}
+    \]
+
+    con orientación $\theta$, un punto expresado localmente como:
+
+    \[
+    {}^{R}\mathbf{p}
+    \]
+
+    puede expresarse globalmente mediante:
+
+    \[
+    \boxed{
+        {}^{G}\mathbf{p}
+        =
+        {}^{G}\mathbf{p}_R
+        +
+        R(\theta)
+        {}^{R}\mathbf{p}
+    }
+    \]
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{La ecuación más importante de la sesión}
+
+    \Idea{
+        Esta relación será fundamental cuando el robot deba interpretar
+        sensores, posición, odometría y objetivos de navegación utilizando
+        diferentes sistemas de referencia.
+    }
+
+    \vspace{0.3cm}
+
+    \Result{
+        La ecuación combina orientación y posición para expresar un punto
+        local dentro del sistema global.
+    }
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Preguntas de cierre}
+
+    Antes de finalizar, responda:
+
+    \begin{enumerate}
+        \item ¿Por qué una rotación no cambia la magnitud de un vector?
+        \item ¿Qué representa físicamente el ángulo $\theta$ de $R(\theta)$?
+        \item ¿Por qué $R^{-1}(\theta)=R^T(\theta)$?
+    \end{enumerate}
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Preguntas de cierre}
+
+    También responda:
+
+    \begin{enumerate}
+        \setcounter{enumi}{3}
+        \item ¿Qué diferencia existe entre rotar y trasladar un punto?
+        \item ¿Por qué un mismo punto puede tener coordenadas diferentes?
+        \item ¿Qué diferencia existe entre ${}^{G}\mathbf{p}$ y
+        ${}^{R}\mathbf{p}$?
+    \end{enumerate}
+
+    \vspace{0.3cm}
+
+    \Result{
+        Comprender los sistemas de referencia es indispensable para interpretar
+        correctamente cualquier posición o movimiento de un robot.
+    }
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Próxima clase}
+
+    En la siguiente sesión comenzaremos a utilizar:
+
+    \[
+    \boxed{\text{ROS 2 Humble}}
+    \]
+
+    para representar computacionalmente sistemas robóticos mediante:
+
+    \begin{itemize}
+        \item nodos;
+        \item tópicos;
+        \item mensajes;
+        \item publicación y suscripción;
+        \item movimiento de un robot mediante Turtlesim.
+    \end{itemize}
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Próxima clase}
+
+    \Idea{
+        La matemática seguirá siendo el modelo del sistema.
+        ROS 2 será la infraestructura que nos permitirá implementar y comunicar
+        sus componentes.
+    }
+
+\end{frame}
+
+% =========================================================
+\begin{frame}
+    \centering
+    \smartimage[0.8\linewidth]{Template/gracias.png}
+\end{frame}
+
+
+% =========================================================
+\section{Solución del laboratorio}
+
+\SectionSlide
+{Solución del laboratorio}
+{Desarrollo matemático y verificación de resultados}
+
+% =========================================================
+\begin{frame}{Parte 1: rotación de \texorpdfstring{$30^\circ$}{30 grados}}
+
+    Para:
+
+    \[
+    \mathbf{p}
+    =
+    \begin{bmatrix}
+        3\\
+        -2
+    \end{bmatrix},
+    \qquad
+    \theta_1=30^\circ
+    \]
+
+    \[
+    R(30^\circ)
+    =
+    \begin{bmatrix}
+        \frac{\sqrt{3}}{2} & -\frac{1}{2}\\
+        \frac{1}{2} & \frac{\sqrt{3}}{2}
+    \end{bmatrix}
+    \]
+
+    \[
+    \mathbf{p}'
+    =
+    R(30^\circ)\mathbf{p}
+    \]
+
+    \[
+    \mathbf{p}'
+    =
+    \begin{bmatrix}
+        \frac{3\sqrt{3}}{2}+1\\
+        \frac{3}{2}-\sqrt{3}
+    \end{bmatrix}
+    \]
+
+    \[
+    \boxed{
+        \mathbf{p}'
+        \approx
+        \begin{bmatrix}
+            3.598\\
+            -0.232
+    \end{bmatrix}}
+    \]
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Parte 1: interpretación para \texorpdfstring{$30^\circ$}{30 grados}}
+
+    La magnitud original es:
+
+    \[
+    \|\mathbf{p}\|
+    =
+    \sqrt{3^2+(-2)^2}
+    =
+    \sqrt{13}
+    \]
+
+    La magnitud después de rotar es:
+
+    \[
+    \|\mathbf{p}'\|
+    \approx
+    \sqrt{3.598^2+(-0.232)^2}
+    \approx
+    \sqrt{13}
+    \]
+
+    \[
+    \boxed{
+        \|\mathbf{p}'\|=\|\mathbf{p}\|
+    }
+    \]
+
+    \vspace{0.3cm}
+
+    \Result{
+        El vector resultante queda en el cuarto cuadrante, porque
+        $x'>0$ y $y'<0$.
+    }
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Parte 1: rotación de \texorpdfstring{$120^\circ$}{120 grados}}
+
+    Para:
+
+    \[
+    \theta_2=120^\circ
+    \]
+
+    \[
+    R(120^\circ)
+    =
+    \begin{bmatrix}
+        -\frac{1}{2} & -\frac{\sqrt{3}}{2}\\
+        \frac{\sqrt{3}}{2} & -\frac{1}{2}
+    \end{bmatrix}
+    \]
+
+    \[
+    \mathbf{p}'
+    =
+    R(120^\circ)
+    \begin{bmatrix}
+        3\\
+        -2
+    \end{bmatrix}
+    \]
+
+    \[
+    \mathbf{p}'
+    =
+    \begin{bmatrix}
+        -\frac{3}{2}+\sqrt{3}\\
+        1+\frac{3\sqrt{3}}{2}
+    \end{bmatrix}
+    \]
+
+    \[
+    \boxed{
+        \mathbf{p}'
+        \approx
+        \begin{bmatrix}
+            0.232\\
+            3.598
+    \end{bmatrix}}
+    \]
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Parte 1: interpretación para \texorpdfstring{$120^\circ$}{120 grados}}
+
+    La magnitud se conserva:
+
+    \[
+    \|\mathbf{p}\|=\sqrt{13}
+    \]
+
+    \[
+    \|\mathbf{p}'\|
+    \approx
+    \sqrt{0.232^2+3.598^2}
+    \approx
+    \sqrt{13}
+    \]
+
+    \vspace{0.3cm}
+
+    \Result{
+        El vector resultante queda en el primer cuadrante, porque
+        $x'>0$ y $y'>0$.
+    }
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Parte 1: rotación de \texorpdfstring{$-60^\circ$}{-60 grados}}
+
+    Para:
+
+    \[
+    \theta_3=-60^\circ
+    \]
+
+    \[
+    R(-60^\circ)
+    =
+    \begin{bmatrix}
+        \frac{1}{2} & \frac{\sqrt{3}}{2}\\
+        -\frac{\sqrt{3}}{2} & \frac{1}{2}
+    \end{bmatrix}
+    \]
+
+    \[
+    \mathbf{p}'
+    =
+    R(-60^\circ)
+    \begin{bmatrix}
+        3\\
+        -2
+    \end{bmatrix}
+    \]
+
+    \[
+    \mathbf{p}'
+    =
+    \begin{bmatrix}
+        \frac{3}{2}-\sqrt{3}\\
+        -\frac{3\sqrt{3}}{2}-1
+    \end{bmatrix}
+    \]
+
+    \[
+    \boxed{
+        \mathbf{p}'
+        \approx
+        \begin{bmatrix}
+            -0.232\\
+            -3.598
+    \end{bmatrix}}
+    \]
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Parte 1: interpretación para \texorpdfstring{$-60^\circ$}{-60 grados}}
+
+    La magnitud también se conserva:
+
+    \[
+    \|\mathbf{p}\|=\sqrt{13}
+    \]
+
+    \[
+    \|\mathbf{p}'\|
+    \approx
+    \sqrt{(-0.232)^2+(-3.598)^2}
+    \approx
+    \sqrt{13}
+    \]
+
+    \vspace{0.3cm}
+
+    \Result{
+        El vector resultante queda en el tercer cuadrante, porque
+        $x'<0$ y $y'<0$.
+    }
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Parte 2: composición de rotaciones}
+
+    Para:
+
+    \[
+    \mathbf{p}
+    =
+    \begin{bmatrix}
+        2\\
+        1
+    \end{bmatrix},
+    \qquad
+    \theta_1=25^\circ,
+    \qquad
+    \theta_2=50^\circ
+    \]
+
+    La rotación equivalente es:
+
+    \[
+    \theta_T=\theta_1+\theta_2
+    \]
+
+    \[
+    \theta_T=25^\circ+50^\circ
+    \]
+
+    \[
+    \boxed{\theta_T=75^\circ}
+    \]
+
+    Por tanto:
+
+    \[
+    R(50^\circ)R(25^\circ)=R(75^\circ)
+    \]
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Parte 2: matrices de rotación}
+
+    Aproximadamente:
+
+    \[
+    R(25^\circ)
+    \approx
+    \begin{bmatrix}
+        0.9063 & -0.4226\\
+        0.4226 & 0.9063
+    \end{bmatrix}
+    \]
+
+    \[
+    R(50^\circ)
+    \approx
+    \begin{bmatrix}
+        0.6428 & -0.7660\\
+        0.7660 & 0.6428
+    \end{bmatrix}
+    \]
+
+    Al multiplicar:
+
+    \[
+    R(50^\circ)R(25^\circ)
+    \approx
+    \begin{bmatrix}
+        0.2588 & -0.9659\\
+        0.9659 & 0.2588
+    \end{bmatrix}
+    \]
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Parte 2: comparación con \texorpdfstring{$R(75^\circ)$}{R 75}}
+
+    La matriz directa para $75^\circ$ es:
+
+    \[
+    R(75^\circ)
+    \approx
+    \begin{bmatrix}
+        0.2588 & -0.9659\\
+        0.9659 & 0.2588
+    \end{bmatrix}
+    \]
+
+    Por tanto:
+
+    \[
+    \boxed{
+        R(50^\circ)R(25^\circ)=R(75^\circ)
+    }
+    \]
+
+    Aplicando sobre el vector:
+
+    \[
+    \mathbf{p}'
+    =
+    R(75^\circ)
+    \begin{bmatrix}
+        2\\
+        1
+    \end{bmatrix}
+    \]
+
+    \[
+    \boxed{
+        \mathbf{p}'
+        \approx
+        \begin{bmatrix}
+            -0.448\\
+            2.191
+    \end{bmatrix}}
+    \]
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Parte 3: sistema local y global}
+
+    El robot posee la pose:
+
+    \[
+    {}^{G}\mathbf{x}_R
+    =
+    \begin{bmatrix}
+        4\\
+        3\\
+        60^\circ
+    \end{bmatrix}
+    \]
+
+    Por tanto:
+
+    \[
+    {}^{G}\mathbf{p}_R
+    =
+    \begin{bmatrix}
+        4\\
+        3
+    \end{bmatrix}
+    \]
+
+    El sensor detecta:
+
+    \[
+    {}^{R}\mathbf{p}
+    =
+    \begin{bmatrix}
+        3\\
+        1
+    \end{bmatrix}
+    \]
+
+    La matriz es:
+
+    \[
+    R(60^\circ)
+    =
+    \begin{bmatrix}
+        \frac{1}{2} & -\frac{\sqrt{3}}{2}\\
+        \frac{\sqrt{3}}{2} & \frac{1}{2}
+    \end{bmatrix}
+    \]
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Parte 3: punto local rotado}
+
+    Aplicamos la rotación:
+
+    \[
+    R(60^\circ)
+    {}^{R}\mathbf{p}
+    =
+    \begin{bmatrix}
+        \frac{1}{2} & -\frac{\sqrt{3}}{2}\\
+        \frac{\sqrt{3}}{2} & \frac{1}{2}
+    \end{bmatrix}
+    \begin{bmatrix}
+        3\\
+        1
+    \end{bmatrix}
+    \]
+
+    \[
+    =
+    \begin{bmatrix}
+        \frac{3}{2}-\frac{\sqrt{3}}{2}\\
+        \frac{3\sqrt{3}}{2}+\frac{1}{2}
+    \end{bmatrix}
+    \]
+
+    \[
+    \boxed{
+        R(60^\circ)
+        {}^{R}\mathbf{p}
+        \approx
+        \begin{bmatrix}
+            0.634\\
+            3.098
+    \end{bmatrix}}
+    \]
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Parte 3: posición global del objeto}
+
+    La transformación local a global es:
+
+    \[
+    {}^{G}\mathbf{p}
+    =
+    {}^{G}\mathbf{p}_R
+    +
+    R(\theta)
+    {}^{R}\mathbf{p}
+    \]
+
+    Sustituyendo:
+
+    \[
+    {}^{G}\mathbf{p}
+    =
+    \begin{bmatrix}
+        4\\
+        3
+    \end{bmatrix}
+    +
+    \begin{bmatrix}
+        0.634\\
+        3.098
+    \end{bmatrix}
+    \]
+
+    \[
+    \boxed{
+        {}^{G}\mathbf{p}
+        \approx
+        \begin{bmatrix}
+            4.634\\
+            6.098
+    \end{bmatrix}}
+    \]
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Parte 3: distancia entre robot y objeto}
+
+    La distancia entre el robot y el objeto es la magnitud del vector local:
+
+    \[
+    {}^{R}\mathbf{p}
+    =
+    \begin{bmatrix}
+        3\\
+        1
+    \end{bmatrix}
+    \]
+
+    \[
+    d
+    =
+    \sqrt{3^2+1^2}
+    \]
+
+    \[
+    \boxed{
+        d=\sqrt{10}
+    }
+    \]
+
+    \[
+    \boxed{
+        d\approx3.162
+    }
+    \]
+
+    \vspace{0.3cm}
+
+    \Result{
+        La rotación cambia las coordenadas del punto respecto al sistema global,
+        pero no cambia la distancia entre el robot y el objeto.
+    }
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Parte 4: transformación inversa}
+
+    Se tiene:
+
+    \[
+    {}^{G}\mathbf{p}_R
+    =
+    \begin{bmatrix}
+        -2\\
+        4
+    \end{bmatrix}
+    \]
+
+    \[
+    \theta=135^\circ
+    \]
+
+    \[
+    {}^{G}\mathbf{p}
+    =
+    \begin{bmatrix}
+        1\\
+        7
+    \end{bmatrix}
+    \]
+
+    Primero restamos:
+
+    \[
+    {}^{G}\mathbf{p}
+    -
+    {}^{G}\mathbf{p}_R
+    =
+    \begin{bmatrix}
+        1\\
+        7
+    \end{bmatrix}
+    -
+    \begin{bmatrix}
+        -2\\
+        4
+    \end{bmatrix}
+    =
+    \begin{bmatrix}
+        3\\
+        3
+    \end{bmatrix}
+    \]
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Parte 4: matriz inversa}
+
+    La transformación inversa utiliza:
+
+    \[
+    {}^{R}\mathbf{p}
+    =
+    R^T(135^\circ)
+    \left(
+    {}^{G}\mathbf{p}
+    -
+    {}^{G}\mathbf{p}_R
+    \right)
+    \]
+
+    Como:
+
+    \[
+    R^T(135^\circ)=R(-135^\circ)
+    \]
+
+    \[
+    R(-135^\circ)
+    =
+    \begin{bmatrix}
+        -\frac{\sqrt{2}}{2} & \frac{\sqrt{2}}{2}\\
+        -\frac{\sqrt{2}}{2} & -\frac{\sqrt{2}}{2}
+    \end{bmatrix}
+    \]
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Parte 4: coordenadas respecto al robot}
+
+    Entonces:
+
+    \[
+    {}^{R}\mathbf{p}
+    =
+    \begin{bmatrix}
+        -\frac{\sqrt{2}}{2} & \frac{\sqrt{2}}{2}\\
+        -\frac{\sqrt{2}}{2} & -\frac{\sqrt{2}}{2}
+    \end{bmatrix}
+    \begin{bmatrix}
+        3\\
+        3
+    \end{bmatrix}
+    \]
+
+    \[
+    {}^{R}\mathbf{p}
+    =
+    \begin{bmatrix}
+        0\\
+        -3\sqrt{2}
+    \end{bmatrix}
+    \]
+
+    \[
+    \boxed{
+        {}^{R}\mathbf{p}
+        \approx
+        \begin{bmatrix}
+            0\\
+            -4.243
+    \end{bmatrix}}
+    \]
+
+\end{frame}
+
+% =========================================================
+\begin{frame}{Parte 4: interpretación geométrica}
+
+    El resultado fue:
+
+    \[
+    {}^{R}\mathbf{p}
+    \approx
+    \begin{bmatrix}
+        0\\
+        -4.243
+    \end{bmatrix}
+    \]
+
+    Esto significa que, visto desde el sistema del robot:
+
+    \begin{itemize}
+        \item el objeto no está desplazado hacia adelante ni hacia atrás en el eje local $x_R$;
+        \item el objeto se encuentra sobre el eje local negativo $y_R$;
+        \item la distancia al objeto es aproximadamente $4.243$ unidades.
+    \end{itemize}
+
+    \Result{
+        El punto global queda expresado ahora desde la perspectiva del robot.
+    }
+
+\end{frame}
+\end{document}

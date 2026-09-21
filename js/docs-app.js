@@ -6,6 +6,7 @@
 
 document.addEventListener('DOMContentLoaded', () => {
     const app = new RoboDocsApp();
+    window.RoboDocsApp = app;
     app.init();
 });
 
@@ -310,6 +311,9 @@ class RoboDocsApp {
         const navContainer = document.getElementById('leftDocsNav');
         if (!navContainer) return;
 
+        const countEl = document.querySelector('.sidebar-count');
+        if (countEl) countEl.textContent = `${docs.length} ${docs.length === 1 ? 'Archivo' : 'Archivos'} .tex`;
+
         // Agrupar por categoría
         const categories = {};
         docs.forEach(doc => {
@@ -527,6 +531,25 @@ class RoboDocsApp {
         }).catch(() => {
             this.showToast('Error al copiar el código.');
         });
+    }
+
+    copySnippet(btn) {
+        const card = btn.closest('.code-block-card');
+        const viewport = card ? card.querySelector('.code-viewport') : null;
+        const rawCode = viewport ? viewport.getAttribute('data-raw') : '';
+        if (rawCode) {
+            navigator.clipboard.writeText(rawCode).then(() => {
+                this.showToast('Fragmento de código copiado.');
+                const span = btn.querySelector('span');
+                if (span) {
+                    const prevText = span.textContent;
+                    span.textContent = '¡Copiado!';
+                    setTimeout(() => { span.textContent = prevText; }, 1800);
+                }
+            }).catch(() => {
+                this.showToast('No se pudo copiar el fragmento.');
+            });
+        }
     }
 
     /* ==========================================================================

@@ -25,6 +25,14 @@
 
     --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-smooth: 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+
+    /* Colores Institucionales Politécnico JIC / Template */
+    --brand-blue: #1E3C78;
+    --brand-blue-dark: #12254d;
+    --brand-green: #14C486;
+    --brand-yellow: #FFB93E;
+    --brand-dark: #0E1014;
+    --brand-gray: #F5F6F8;
 }
 
 /* Modo Oscuro Industrial (Predeterminado) */
@@ -767,6 +775,941 @@ body.robodocs-body {
 
 .latex-citation:hover {
     text-decoration: underline;
+}
+
+/* ==========================================================================
+   Plataforma Beamer & Plantilla Institucional (template-slide.tex)
+   ========================================================================== */
+
+/* Si el lienzo contiene una presentación Beamer, convertir el contenedor en transparente */
+.latex-rendered-paper:has(.is-beamer-presentation) {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+}
+
+.latex-beamer-deck {
+    display: flex;
+    flex-direction: column;
+    gap: 2.25rem;
+    width: 100%;
+}
+
+/* Cabecera Principal de la Presentación / Asignatura */
+.deck-main-header {
+    background: linear-gradient(135deg, rgba(30, 60, 120, 0.4) 0%, rgba(14, 16, 20, 0.9) 100%);
+    border: 1px solid rgba(20, 196, 134, 0.35);
+    border-radius: var(--radius-lg);
+    padding: 2.25rem 2.5rem;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.45);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    position: relative;
+    overflow: hidden;
+}
+
+[data-theme="light"] .deck-main-header {
+    background: linear-gradient(135deg, #f0f7ff 0%, #e8faf5 100%);
+    border-color: rgba(20, 196, 134, 0.5);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.06);
+}
+
+.deck-main-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--brand-blue) 0%, var(--brand-green) 50%, var(--brand-yellow) 100%);
+}
+
+.deck-header-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--brand-green);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.badge-sep {
+    opacity: 0.5;
+}
+
+.deck-main-title {
+    font-family: var(--font-heading);
+    font-size: clamp(1.8rem, 3.2vw, 2.4rem);
+    font-weight: 800;
+    color: var(--text-primary);
+    line-height: 1.2;
+    margin: 0;
+}
+
+.deck-main-subtitle {
+    font-size: 1.12rem;
+    color: var(--color-cyan);
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.deck-meta-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    margin-top: 0.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-subtle);
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+}
+
+.meta-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.meta-item i {
+    color: var(--brand-green);
+}
+
+.meta-slides-counter {
+    margin-left: auto;
+    background: rgba(20, 196, 134, 0.15);
+    color: var(--brand-green);
+    padding: 3px 10px;
+    border-radius: var(--radius-full);
+    font-weight: 700;
+    font-size: 0.8rem;
+}
+
+/* ==========================================================================
+   Diapositivas Beamer Individuales (.beamer-slide)
+   ========================================================================== */
+.beamer-slide {
+    background-color: var(--paper-bg);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 480px;
+    position: relative;
+    scroll-margin-top: 80px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+[data-theme="light"] .beamer-slide {
+    background-color: #ffffff;
+    border-color: #e2e8f0;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+
+.beamer-slide:hover {
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 25px rgba(6, 182, 212, 0.12);
+}
+
+/* Barra de Título del Frame (frametitle Beamer con BrandBlue) */
+.frame-title-bar {
+    background: var(--brand-blue);
+    color: #ffffff;
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    border-bottom: 2.5px solid var(--brand-green);
+}
+
+.frame-slide-num {
+    background: rgba(255, 255, 255, 0.18);
+    color: #ffffff;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    font-family: var(--font-mono);
+}
+
+.frame-title-text {
+    font-family: var(--font-heading);
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #ffffff;
+    margin: 0;
+    letter-spacing: -0.01em;
+    flex: 1;
+}
+
+/* Cuerpo de la Diapositiva */
+.frame-body {
+    padding: 2.25rem 2.5rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    font-size: 1.04rem;
+    line-height: 1.7;
+    color: var(--text-primary);
+}
+
+/* Pie de Página del Frame (footline Beamer) */
+.frame-footline {
+    padding: 8px 24px;
+    background: rgba(0, 0, 0, 0.25);
+    border-top: 1px solid var(--border-subtle);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.76rem;
+    color: var(--text-muted);
+}
+
+[data-theme="light"] .frame-footline {
+    background: #f8fafc;
+    border-top-color: #e2e8f0;
+}
+
+.footline-course {
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.footline-instructor {
+    color: var(--text-secondary);
+    margin-right: 12px;
+}
+
+.footline-page-num {
+    background: rgba(255, 255, 255, 0.08);
+    padding: 2px 7px;
+    border-radius: var(--radius-sm);
+    font-weight: 700;
+    font-family: var(--font-mono);
+}
+
+[data-theme="light"] .footline-page-num {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+
+/* ==========================================================================
+   Diapositivas Maestras Especiales
+   ========================================================================== */
+
+/* 1. Portada Institucional (\TitleSlide) */
+.slide-cover-institutional {
+    min-height: 520px;
+    background: linear-gradient(135deg, rgba(30, 60, 120, 0.25) 0%, rgba(14, 16, 20, 0.95) 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 0;
+    text-align: center;
+}
+
+[data-theme="light"] .slide-cover-institutional {
+    background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
+}
+
+.cover-accent-rule {
+    height: 3px;
+    background: var(--brand-green);
+    width: 100%;
+}
+
+.cover-body {
+    padding: 3rem 2.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1.25rem;
+    flex: 1;
+}
+
+.cover-logo-badge {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.institution-pill {
+    background: rgba(30, 60, 120, 0.6);
+    color: #ffffff;
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 5px 14px;
+    border-radius: var(--radius-full);
+    letter-spacing: 0.04em;
+}
+
+.faculty-pill {
+    background: rgba(20, 196, 134, 0.2);
+    color: var(--brand-green);
+    border: 1px solid var(--brand-green);
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 5px 14px;
+    border-radius: var(--radius-full);
+}
+
+.cover-title {
+    font-family: var(--font-heading);
+    font-size: clamp(2rem, 3.8vw, 2.8rem);
+    font-weight: 900;
+    color: var(--text-primary);
+    line-height: 1.15;
+    margin-top: 0.5rem;
+}
+
+.cover-code {
+    font-family: var(--font-mono);
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--brand-yellow);
+    letter-spacing: 0.08em;
+}
+
+.cover-subtitle {
+    font-size: 1.15rem;
+    color: var(--text-secondary);
+    max-width: 680px;
+    line-height: 1.5;
+}
+
+.cover-footer-info {
+    margin-top: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    max-width: 640px;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--border-subtle);
+}
+
+.instructor-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-align: left;
+}
+
+.instructor-icon {
+    font-size: 1.8rem;
+}
+
+.instructor-name {
+    font-weight: 700;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+}
+
+.instructor-email a {
+    color: var(--color-cyan);
+    text-decoration: none;
+    font-size: 0.82rem;
+}
+
+.period-badge {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.06);
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+}
+
+/* 2. Diapositiva de Normas del Curso (\NormasSlide) */
+.normas-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.25rem;
+    width: 100%;
+}
+
+.norma-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 1.25rem 1rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.6rem;
+    transition: transform var(--transition-fast);
+}
+
+[data-theme="light"] .norma-card {
+    background: #f8fafc;
+    border-color: #e2e8f0;
+}
+
+.norma-card:hover {
+    transform: translateY(-3px);
+    border-color: var(--brand-green);
+}
+
+.norma-card.wide-card {
+    grid-column: span 1.5;
+}
+
+.norma-icon-circle {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+}
+
+.icon-yellow { background: rgba(255, 185, 62, 0.15); }
+.icon-green  { background: rgba(20, 196, 134, 0.15); }
+.icon-blue   { background: rgba(30, 60, 120, 0.25); }
+.icon-teal   { background: rgba(6, 182, 212, 0.15); }
+.icon-purple { background: rgba(139, 92, 246, 0.15); }
+
+.norma-header {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+}
+
+.norma-card p {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.45;
+    margin: 0;
+}
+
+/* 3. Diapositiva de Transición de Sección (\SectionSlide) */
+.slide-section-banner {
+    min-height: 380px;
+    background: radial-gradient(circle at center, rgba(30, 60, 120, 0.5) 0%, rgba(14, 16, 20, 0.95) 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+[data-theme="light"] .slide-section-banner {
+    background: radial-gradient(circle at center, #dbeafe 0%, #ffffff 100%);
+}
+
+.section-banner-card {
+    padding: 2.5rem 3rem;
+    max-width: 760px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}
+
+.section-banner-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(20, 196, 134, 0.2);
+    color: var(--brand-green);
+    border: 1px solid var(--brand-green);
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 4px 12px;
+    border-radius: var(--radius-full);
+}
+
+.section-banner-title {
+    font-family: var(--font-heading);
+    font-size: clamp(1.8rem, 3.2vw, 2.5rem);
+    font-weight: 900;
+    color: #ffffff;
+    line-height: 1.2;
+    margin: 0;
+}
+
+[data-theme="light"] .section-banner-title {
+    color: var(--brand-blue);
+}
+
+.section-banner-rule {
+    width: 80px;
+    height: 3px;
+    background: var(--brand-green);
+    border-radius: var(--radius-full);
+}
+
+.section-banner-sub {
+    font-size: 1.18rem;
+    color: var(--color-cyan);
+    font-weight: 500;
+    line-height: 1.5;
+    margin: 0;
+}
+
+/* ==========================================================================
+   Columnas Beamer (\begin{columns} y \begin{column})
+   ========================================================================== */
+.beamer-columns {
+    display: flex;
+    gap: 2rem;
+    align-items: stretch;
+    width: 100%;
+    margin: 1rem 0;
+}
+
+.beamer-column {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    min-width: 0;
+}
+
+@media (max-width: 768px) {
+    .beamer-columns {
+        flex-direction: column;
+    }
+    .beamer-column {
+        max-width: 100% !important;
+        flex: 1 1 100% !important;
+    }
+    .normas-grid {
+        grid-template-columns: 1fr;
+    }
+    .norma-card.wide-card {
+        grid-column: span 1;
+    }
+}
+
+/* ==========================================================================
+   Bloques Docentes Personalizados (\Idea, \Practice, \DefBlock, etc.)
+   ========================================================================== */
+.docent-block {
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    margin: 1.25rem 0;
+    border: 1px solid transparent;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+}
+
+.block-title-row {
+    padding: 9px 16px;
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 0.92rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #ffffff;
+    letter-spacing: 0.02em;
+}
+
+.block-icon {
+    font-size: 1.05rem;
+}
+
+.block-content-body {
+    padding: 14px 18px;
+    font-size: 0.98rem;
+    line-height: 1.65;
+}
+
+/* 1. \Idea -> Azul Institucional (IdeaTitle #1E3C78 / IdeaBody #EBF1FF) */
+.block-idea { border-color: rgba(30, 60, 120, 0.4); }
+.block-idea .block-title-row { background: #1E3C78; }
+.block-idea .block-content-body { background: rgba(30, 60, 120, 0.12); color: var(--text-primary); }
+[data-theme="light"] .block-idea .block-content-body { background: #EBF1FF; color: #0f172a; }
+
+/* 2. \Practice -> Verde Azulado (PracticeTitle #14785A / PracticeBody #E8FAF5) */
+.block-practice { border-color: rgba(20, 120, 90, 0.4); }
+.block-practice .block-title-row { background: #14785A; }
+.block-practice .block-content-body { background: rgba(20, 120, 90, 0.12); color: var(--text-primary); }
+[data-theme="light"] .block-practice .block-content-body { background: #E8FAF5; color: #0f172a; }
+
+/* 3. \DefBlock -> Violeta Teórico (DefTitle #5A46A0 / DefBody #F0ECFF) */
+.block-def { border-color: rgba(90, 70, 160, 0.4); }
+.block-def .block-title-row { background: #5A46A0; }
+.block-def .block-content-body { background: rgba(90, 70, 160, 0.12); color: var(--text-primary); }
+[data-theme="light"] .block-def .block-content-body { background: #F0ECFF; color: #0f172a; }
+
+/* 4. \Result -> Verde Acierto (ResultTitle #007800 / ResultBody #EBFAEB) */
+.block-result { border-color: rgba(0, 120, 0, 0.4); }
+.block-result .block-title-row { background: #007800; }
+.block-result .block-content-body { background: rgba(0, 120, 0, 0.12); color: var(--text-primary); }
+[data-theme="light"] .block-result .block-content-body { background: #EBFAEB; color: #0f172a; }
+
+/* 5. \Warning -> Rojo Advertencia (WarnTitle #A01E1E / WarnBody #FFEBEB) */
+.block-warning { border-color: rgba(160, 30, 30, 0.4); }
+.block-warning .block-title-row { background: #A01E1E; }
+.block-warning .block-content-body { background: rgba(160, 30, 30, 0.12); color: var(--text-primary); }
+[data-theme="light"] .block-warning .block-content-body { background: #FFEBEB; color: #0f172a; }
+
+/* 6. \Compare -> Azul Pizarra (CompareTitle #1C5C91 / CompareBody #EBF5FC) */
+.block-compare { border-color: rgba(28, 92, 145, 0.4); }
+.block-compare .block-title-row { background: #1C5C91; }
+.block-compare .block-content-body { background: rgba(28, 92, 145, 0.12); color: var(--text-primary); }
+[data-theme="light"] .block-compare .block-content-body { background: #EBF5FC; color: #0f172a; }
+
+/* 7. \Question -> Ámbar Pregunta (QuestionTitle #B07014 / QuestionBody #FFF7E1) */
+.block-question { border-color: rgba(176, 112, 20, 0.4); }
+.block-question .block-title-row { background: #B07014; }
+.block-question .block-content-body { background: rgba(176, 112, 20, 0.12); color: var(--text-primary); }
+[data-theme="light"] .block-question .block-content-body { background: #FFF7E1; color: #0f172a; }
+
+/* 8. \ExampleBlock -> Morado Ejemplo (ExampleTitle #544E96 / ExampleBody #F3F1FF) */
+.block-example { border-color: rgba(84, 78, 150, 0.4); }
+.block-example .block-title-row { background: #544E96; }
+.block-example .block-content-body { background: rgba(84, 78, 150, 0.12); color: var(--text-primary); }
+[data-theme="light"] .block-example .block-content-body { background: #F3F1FF; color: #0f172a; }
+
+/* ==========================================================================
+   Entornos de Código (Minted / Tcolorbox)
+   ========================================================================== */
+.code-block-card {
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    margin: 1.25rem 0;
+    border: 1px solid var(--border-subtle);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    font-family: var(--font-mono);
+}
+
+.code-block-card.theme-dark {
+    background: #121826;
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.code-block-card.theme-light {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+}
+
+.code-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 14px;
+    background: rgba(0, 0, 0, 0.25);
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.code-lang-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.code-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+}
+
+.code-dot.red    { background: #ef4444; }
+.code-dot.yellow { background: #f59e0b; }
+.code-dot.green  { background: #10b981; }
+
+.code-lang-name {
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-left: 4px;
+}
+
+.btn-copy-code-snippet {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 9px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+
+.btn-copy-code-snippet:hover {
+    color: #ffffff;
+    background: var(--brand-green);
+    border-color: var(--brand-green);
+}
+
+.code-viewport {
+    padding: 12px 16px;
+    overflow-x: auto;
+    font-size: 0.86rem;
+    line-height: 1.6;
+}
+
+.code-line {
+    display: flex;
+    gap: 12px;
+}
+
+.code-line .line-num {
+    color: #475569;
+    user-select: none;
+    text-align: right;
+    width: 28px;
+    flex-shrink: 0;
+}
+
+.code-line .line-code {
+    color: #cbd5e1;
+    white-space: pre;
+}
+
+[data-theme="light"] .code-line .line-code {
+    color: #1e293b;
+}
+
+/* ==========================================================================
+   Diagramas Geométricos Vectoriales TikZ (SVG)
+   ========================================================================== */
+.tikz-diagram-wrapper {
+    margin: 1.5rem 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+}
+
+.tikz-svg-card {
+    background: #090f1d;
+    border: 1px solid rgba(56, 189, 248, 0.2);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    width: 100%;
+    max-width: 520px;
+}
+
+[data-theme="light"] .tikz-svg-card {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.06);
+}
+
+.tikz-card-header {
+    padding: 7px 14px;
+    background: rgba(255, 255, 255, 0.03);
+    border-bottom: 1px solid var(--border-subtle);
+    display: flex;
+    align-items: center;
+}
+
+.tikz-badge {
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: var(--color-cyan);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.tikz-svg-viewport {
+    padding: 1.5rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.tikz-svg-canvas {
+    width: 100%;
+    max-width: 440px;
+    height: auto;
+    display: block;
+}
+
+.tikz-source-collapse {
+    width: 100%;
+    max-width: 520px;
+    margin-top: 6px;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+}
+
+.tikz-source-collapse summary {
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+    transition: var(--transition-fast);
+}
+
+.tikz-source-collapse summary:hover {
+    color: var(--color-cyan);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.tikz-raw-code {
+    margin-top: 6px;
+    background: #080c16;
+    padding: 10px;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-mono);
+    font-size: 0.76rem;
+    overflow-x: auto;
+}
+
+/* ==========================================================================
+   Vista de Referencia de Plantilla (template-slide.tex)
+   ========================================================================== */
+.template-doc-view {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    width: 100%;
+}
+
+.template-hero-header {
+    background: linear-gradient(135deg, rgba(30, 60, 120, 0.35) 0%, rgba(14, 16, 20, 0.95) 100%);
+    border: 1px solid var(--brand-green);
+    border-radius: var(--radius-lg);
+    padding: 2.5rem;
+}
+
+.hero-tag {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--brand-green);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.75rem;
+}
+
+.hero-title {
+    font-family: var(--font-heading);
+    font-size: 2.2rem;
+    font-weight: 900;
+    color: #ffffff;
+    margin-bottom: 0.5rem;
+}
+
+.hero-description {
+    font-size: 1.05rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+.template-section-card {
+    background: var(--paper-bg);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.template-section-card h2 {
+    font-family: var(--font-heading);
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.sec-badge {
+    background: var(--brand-blue);
+    color: #ffffff;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.84rem;
+}
+
+.spec-grid-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+}
+
+.spec-item-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.spec-label {
+    font-size: 0.74rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.spec-val {
+    font-size: 0.94rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.palette-swatches-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1.25rem;
+}
+
+.color-swatch-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.swatch-preview {
+    height: 60px;
+    border-radius: var(--radius-sm);
+    background-color: var(--swatch-color);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.15);
+}
+
+.swatch-info {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.swatch-info strong {
+    font-size: 0.88rem;
+    color: var(--text-primary);
+}
+
+.swatch-info code {
+    font-family: var(--font-mono);
+    font-size: 0.76rem;
+    color: var(--brand-green);
+}
+
+.swatch-info small {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    line-height: 1.35;
 }
 
 /* ==========================================================================
